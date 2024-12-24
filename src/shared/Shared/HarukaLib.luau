@@ -11,16 +11,28 @@ local UIS = game:GetService("UserInputService")
 local Signal = require(RepS.HarukaShared.Shared.Signal)
 local Promise = require(RepS.HarukaShared.Shared.Promise)
 
+local wait = task.wait
+
 local HarukaLib = {}
 
+--[[
+	Helper function to convert a number to a string with a suffix.
 
-function HarukaLib:NumberConvert(number: number, type: string) : string
+    **Example:**
+    ``````lua
+    HarukaLib:NumberConvert(1000, 2) --- 1.00K
+    ``````
+]]
+function HarukaLib:NumberConvert(number: number, decimalPlaces: number) : string
 	local prefixes = { "", "K", "M", "B", "T", "Q", "Qi", "Sx", "Sp", "Oc", "No", "Dc", "Ud", "Dd" }
 	local abbrFactor = math.floor(math.floor(math.log10(number)) / 3)
 
+	decimalPlaces = decimalPlaces or 2
+    local outputType = "%.".. tostring(decimalPlaces).. "f"
+
 	if abbrFactor > 0 then
 		if prefixes[abbrFactor + 1] then
-			return string.format(type, number / 10 ^ (abbrFactor * 3)) .. prefixes[abbrFactor + 1]
+			return string.format(outputType, number / 10 ^ (abbrFactor * 3)) .. prefixes[abbrFactor + 1]
 		end
 	end
 
@@ -28,6 +40,9 @@ function HarukaLib:NumberConvert(number: number, type: string) : string
 end
 
 
+--[[
+    Get the device type
+]]
 function HarukaLib:GetDevice() : "PC" | "Mobile" | "Console" | "VR"
 	local device = "PC"
 
@@ -39,7 +54,10 @@ function HarukaLib:GetDevice() : "PC" | "Mobile" | "Console" | "VR"
 end
 
 
-function HarukaLib:GetAccurateDevice() : "PC" | "Tablet" | "Phone" | "Xbox" | "PlayStation" | "VR"
+--[[
+    Get the accurate device type
+]]
+function HarukaLib:GetAccurateDevice() : "PC" | "Xbox" | "PlayStation" | "Phone" | "Tablet" | "VR"
 	local device = "PC"
 
 	if GuiService:IsTenFootInterface() then
@@ -64,19 +82,42 @@ function HarukaLib:GetAccurateDevice() : "PC" | "Tablet" | "Phone" | "Xbox" | "P
 end
 
 
+--[[
+	Increase attribute value for an instance.
+	It will not work if attribute is not a number.
+
+	But it will create a default value (0) if attribute is not exist.
+
+	**Example:**
+	``````lua
+	obj.Health = 0
+	HarukaLib:AddAttr(obj, "Health", 10) --- obj.Health = 10
+	``````
+]]
 function HarukaLib:AddAttr(obj: Instance, attribute: string, val: number)
-	if obj:GetAttribute(attribute) == nil then obj:SetAttribute(attribute, 0) end
+	if obj:GetAttribute(attribute) == nil then
+		obj:SetAttribute(attribute, 0)
+	end
+	if typeof(obj:GetAttribute(attribute) ~= "number") then
+		return
+	end
 
 	obj:SetAttribute(attribute, obj:GetAttribute(attribute) + val)
 end
 
 
+--[[
+	The same as `obj:ClearAllChildren()`, but it applies for attributes
+]]
 function HarukaLib:ClearAllAttributes(obj: Instance)
 	for attribute, _ in obj:GetAttributes() do obj:SetAttribute(attribute, nil) end
 end
 
 
-function HarukaLib:IsInRegion(position: Vector3, regions: table) : BasePart
+--[[
+	Detect if the given position is inside any of the given regions.
+]]
+function HarukaLib:IsInRegion(position: Vector3, regions: { any }) : BasePart?
 	local region: BasePart = nil
 
 	for _, child: BasePart in regions do
@@ -97,16 +138,28 @@ function HarukaLib:IsInRegion(position: Vector3, regions: table) : BasePart
 end
 
 
+--[[
+	Transform a plain text to rich text, it will only work when `RichText = true`
+
+	**Example:**
+	``````lua
+	HarukaLib:RichTextify("<blue>Hello</font>,<red>World</font>!")
+	``````
+]]
 function HarukaLib:RichTextify(text: string) : string
 	if not text then return "" end
 
 	local colorList = {
-		["<blue>"] = [[<font color="#70a1ff">]],
-		["<purple>"] = [[<font color="#5352ed">]],
-		["<red>"] = [[<font color="#ff4757">]],
-		["<orange>"] = [[<font color="#ffa502">]],
-		["<yellow>"] = [[<font color="#ffda79">]],
+		["<blue>"] = [[<font color="#74b9ff">]],
+		["<purple>"] = [[<font color="#a29bfe">]],
+		["<red>"] = [[<font color="#ff6b81">]],
+		["<orange>"] = [[<font color="#f9ca24">]],
+		["<yellow>"] = [[<font color="#f1c40f">]],
 		["<green>"] = [[<font color="#7bed9f">]],
+		["<cyan>"] = [[<font color="#81ecec">]],
+		["<white>"] = [[<font color="#ffffff">]],
+		["<black>"] = [[<font color="#2d3436">]],
+		["<pink>"] = [[<font color="#ff9ff3">]],
 	}
 
 	for oriTag: string, rbxColorTag: string in colorList do
@@ -117,46 +170,57 @@ function HarukaLib:RichTextify(text: string) : string
 end
 
 
-function HarukaLib:Serialize(val: CFrame | Vector3 | Color3) : any
+--[[
+	Serialize and deserialize roblox types to a table.
+	It only supports `CFrame`, `Vector3`, and `Color3`.
+]]
+function HarukaLib:Serialize(method: "Pack" | "Unpack", val: any) : any
 	local valType = typeof(val)
 
-	if valType == "CFrame" then
-		return { "CFrame", val:GetComponents() }
+	if method == "Pack" then
+		if valType == "CFrame" then
+			return { "CFrame", val:GetComponents() }
 
-	elseif valType == "Vector3" then
-		return { "Vector3", math.floor(val.X), math.floor(val.Y), math.floor(val.Z) }
+		elseif valType == "Vector3" then
+			return { "Vector3", math.floor(val.X), math.floor(val.Y), math.floor(val.Z) }
 
-	elseif valType == "Color3" then
-		return { "Color3", val.R, val.G, val.B }
+		elseif valType == "Color3" then
+			return { "Color3", val.R, val.G, val.B }
+		else
+			return val
+		end
 
-	else
-		return val --- return default
+	elseif method == "Unpack" then
+		if valType ~= "table" then return val end
+		valType = val[1] :: string
+
+		if valType == "CFrame" then
+			return CFrame.new(unpack(val, 2, #val))
+
+		elseif valType == "Vector3" then
+			return Vector3.new(unpack(val, 2, #val))
+
+		elseif valType == "Color3" then
+			return Color3.fromRGB(unpack(val, 2, #val))
+		else
+			return val
+		end
 	end
-end
-function HarukaLib:Deserialize(val: table) : any
-	if typeof(val) ~= "table" then return val end
 
-	local valType = val[1] :: string
-
-	if valType == "CFrame" then
-		return CFrame.new(unpack(val, 2, #val))
-
-	elseif valType == "Vector3" then
-		return Vector3.new(unpack(val, 2, #val))
-
-	elseif valType == "Color3" then
-		return Color3.fromRGB(unpack(val, 2, #val))
-
-	else
-		return valType
-	end
+	return val
 end
 
 
+--[[
+	Inspired by `Fusion.Hydrate`, it will add a tracker to the given props/attrs,
+	and call it funcs when the value of the prop/attr is changed.
+
+	Return a function to destroy the tracker.
+]]
 function HarukaLib:Hydrate(obj: Instance, props: table)
 	local Add, Empty = HarukaLib.Bin()
 
-	for prop, func in props do
+	for prop: string, func in props do
 		if string.find(prop, "Attr") then
 			local _, endPos = string.find(prop, "Attr")
 			local attr = string.sub(prop, endPos + 2)
@@ -183,7 +247,11 @@ function HarukaLib:Hydrate(obj: Instance, props: table)
 end
 
 
+--[[
+	Inspired by `Maid`, and `Fusion.doCleanup`, you can add anything to the bin.
 
+	Return a function to destroy the items inside the bin, bin can reused.
+]]
 function HarukaLib.Bin()
 	local bin = {}
 
@@ -207,9 +275,13 @@ function HarukaLib.Bin()
 			elseif typeof(item.Destroy) == "function" then
 				item:Destroy()
 
+			--- cancel any exist promises
+			elseif getmetatable(item) then
+				if item.prototype then item:cancel() end
+
 			elseif item[1] ~= nil then
 				for index = #item, 1, -1 do
-					pcall(doCleanup, item[index])
+					doCleanup(item[index])
 
 					item[index] = nil
 				end
@@ -230,6 +302,9 @@ function HarukaLib.Bin()
 end
 
 
+--[[
+	Inspired by `Timer`, just like `window.setInterval` in javascript
+]]
 function HarukaLib.Clock(tickTime: number, func: () -> ())
 	local nowTime = 0
 	local dropTime = tickTime * 10
@@ -254,16 +329,21 @@ function HarukaLib.Clock(tickTime: number, func: () -> ())
 end
 
 
+--[[
+	Inspired by `AdvancedTweenV2`, it can tween any property of any instance.
+
+	Return a signal class, it will fire when the tween is completed.
+]]
 function HarukaLib:Tween(object: Instance, style: TweenInfo, goal: table)
 	local properties = {}
-	local signal = Signal.new()
+	local tweenSignal = Signal.new()
 
 	local dataTypes = {
 		number = function(a, b, t)
 			return a + ((b - a) * t)
 		end,
 
-		Vector3 = function(a, b, t)
+		V3 = function(a, b, t)
 			return a:Lerp(b, t)
 		end
 	}
@@ -290,7 +370,7 @@ function HarukaLib:Tween(object: Instance, style: TweenInfo, goal: table)
 
 			table.insert(keyPoints, ColorSequenceKeypoint.new(
 				dataTypes.number(keypoint.Time, nextKeypoint.Time, t),
-				dataTypes.Vector3(keypoint.Value, nextKeypoint.Value, math.clamp(t, 0, 1))
+				dataTypes.V3(keypoint.Value, nextKeypoint.Value, math.clamp(t, 0, 1))
 			))
 		end
 
@@ -308,7 +388,7 @@ function HarukaLib:Tween(object: Instance, style: TweenInfo, goal: table)
 		if name == "Pivot" then
 			if not object:IsA("PVInstance") then
 				warn(name.." is not allowed for this object! "..object:GetFullName())
-				return
+				continue
 			end
 
 			properties[name] = object:GetPivot()
@@ -333,12 +413,11 @@ function HarukaLib:Tween(object: Instance, style: TweenInfo, goal: table)
 
 			-- Update
 			local lerp = TweenService:GetValue(alpha, style.EasingStyle, style.EasingDirection)
-
 			for name: string, val: any in goal do
 				local original = properties[name]
 
 				if name == "Pivot" then
-					object:PivotTo(dataTypes.Vector3(original, val, lerp))
+					object:PivotTo(dataTypes.V3(original, val, lerp))
 				else
 					object[name] = dataTypes[typeof(val)](original, val, lerp)
 				end
@@ -359,35 +438,42 @@ function HarukaLib:Tween(object: Instance, style: TweenInfo, goal: table)
 				end
 			end
 
-			task.wait()
+			wait()
 		end
 
-		signal:Fire("Completed")
-		signal:Destroy()
+		tweenSignal:Fire("Completed")
+		tweenSignal:Destroy()
 	end)
 
-	return signal
+	return tweenSignal
 end
 
 
-function HarukaLib:TypeCheck(checkTask: "Integer" | "Min" | "Max" | "MinMax", val: any, extra: number?, extra2: number?) : boolean
+--[[
+	Inspired by `t`, it can typecheck any value in runtime
+]]
+function HarukaLib:TypeCheck(checkList: "Integer" | "Min" | "Max" | "MinMax", val: any, extra: {
+	Min: number?,
+	Max: number?
+}) : boolean
+
 	local success = pcall(function()
-		if checkTask == "Integer" then
+		if checkList == "Integer" then
 			assert(type(val) == "number")
 			assert(val % 1 == 0)
 
-		elseif checkTask == "Min" then
+		elseif checkList == "Min" then
 			assert(type(val) == "number")
-			assert(val >= extra)
+			assert(val > extra.Min)
 
-		elseif checkTask == "Max" then
+		elseif checkList == "Max" then
 			assert(type(val) == "number")
-			assert(val <= extra)
+			assert(val < extra.Max)
 
-		elseif checkTask == "MinMax" then
+		elseif checkList == "MinMax" then
 			assert(type(val) == "number")
-			assert(val > extra)
-			assert(val < extra2)
+			assert(val > extra.Min)
+			assert(val < extra.Max)
 		end
 	end)
 
@@ -395,6 +481,18 @@ function HarukaLib:TypeCheck(checkTask: "Integer" | "Min" | "Max" | "MinMax", va
 end
 
 
+--[[
+	Inspired by `Sol's RNG`, basically it will roll a thing depends on the weight you give
+
+	**Example:**
+	``````lua
+	HarukaLib:RollLoot({
+		["Gold"] = 50,
+		["Diamond"] = 30,
+		["Silver"] = 20
+	})
+	``````
+]]
 function HarukaLib:RollLoot(loots: { [string]: number }) : string
 	local lootList = {}
 
@@ -403,15 +501,13 @@ function HarukaLib:RollLoot(loots: { [string]: number }) : string
 			Name = loot,
 			Weight = weight
 		}
-		lootList[#lootList + 1] = info
+		table.insert(lootList, info)
 	end
 
-	-- simple sort
 	table.sort(lootList, function(a, b)
 		return a.Weight < b.Weight
 	end)
 
-	--- start to roll
 	local result = Random.new():NextNumber()
 	local aggregate = 0
 
@@ -419,8 +515,6 @@ function HarukaLib:RollLoot(loots: { [string]: number }) : string
 		local chance = loot.Weight :: number
 
 		if result < (chance + aggregate) / 100 then
-			lootList = nil --// GC
-
 			return loot.Name
 		end
 
@@ -429,11 +523,14 @@ function HarukaLib:RollLoot(loots: { [string]: number }) : string
 end
 
 
-function HarukaLib:PlayCutscene(pointsFolder: Folder | Model, duration: number)
+--[[
+	Inspired by `CutsceneService`, it will fire the signal class when the cutscene is completed.
+]]
+function HarukaLib:PlayCutscene(pointsFolder: Folder, duration: number)
 	local camera = workspace.CurrentCamera
-	local signal = Signal.new()
+	local cutsceneSignal = Signal.new()
 
-	--// Private
+	--// Helper funcs
 	local function _getCF(points: table, t: number) : CFrame
 		local copy = { unpack(points) }
 
@@ -473,26 +570,32 @@ function HarukaLib:PlayCutscene(pointsFolder: Folder | Model, duration: number)
 			else
 				RunService:UnbindFromRenderStep("HarukaCutscene")
 
-				signal:Fire("Completed")
-				signal:Destroy()
+				cutsceneSignal:Fire("Completed")
+				cutsceneSignal:Destroy()
 			end
 		end)
 	end)
 
-	return signal
+	return cutsceneSignal
 end
 
 
-function HarukaLib:UIStrokeCalculate(thickness: number) : number
+--[[
+	This is the util for `UIStrokeAdjustor`, return accurate thickness based on viewport size
+]]
+function HarukaLib:CalculateStrokeThickness(thickness: number) : number
 	local VPSize = workspace.CurrentCamera.ViewportSize
-	local DesignSize = Vector2.new(1172, 466.4)
+	local DESIGN_SIZE = Vector2.new(1172, 466.4)
 
-	local transformed = thickness * (math.min(VPSize.X, VPSize.Y) / math.min(DesignSize.X, DesignSize.Y))
+	local transformed = thickness * (math.min(VPSize.X, VPSize.Y) / math.min(DESIGN_SIZE.X, DESIGN_SIZE.Y))
 
 	return transformed
 end
 
 
+--[[
+	It will freeze/unfreeze player controls
+]]
 function HarukaLib:FreezePlayerControls(action: "Freeze" | "Unfreeze")
     if action == "Freeze" then
         UIS.ModalEnabled = true
@@ -508,6 +611,9 @@ function HarukaLib:FreezePlayerControls(action: "Freeze" | "Unfreeze")
 end
 
 
+--[[
+	Helper function to set the collision group of an object and its children
+]]
 function HarukaLib:SetCollisionGroup(object: Instance, group: string)
 	if object:IsA("BasePart") or object:IsA("UnionOperation") or object:IsA("CornerWedgePart") then object.CollisionGroup = group end
 
@@ -515,9 +621,12 @@ function HarukaLib:SetCollisionGroup(object: Instance, group: string)
 end
 
 
-function HarukaLib:CombineRbxId(id: string?)
+--[[
+	Helper function to combine id with the prefix `"rbxassetid://"`
+]]
+function HarukaLib:CombineRbxId(id: string | number)
     if not id then
-        warn("[ClientUtil]: Invalid Id")
+		warn("Invalid ID")
         return "rbxassetid://0"
     end
 
@@ -525,6 +634,9 @@ function HarukaLib:CombineRbxId(id: string?)
 end
 
 
+--[[
+	Helper function to ban a player, Server-Side ONLY
+]]
 function HarukaLib:BanPlayer(plr: Player, properties: {
 	Duration: number,
 	DisplayReason: string,
@@ -549,6 +661,9 @@ function HarukaLib:BanPlayer(plr: Player, properties: {
 end
 
 
+--[[
+	Helper function to tween the transparency of a UI element
+]]
 function HarukaLib:UITween(ui: GuiObject, method: string, properties: {
 	DelayTime: number?,
 	ForceGoal: number?,
@@ -617,15 +732,9 @@ function HarukaLib:UITween(ui: GuiObject, method: string, properties: {
 end
 
 
-function HarukaLib:LoadModules(module: ModuleScript | Folder, plr: Player)
-	for _, child in module:GetChildren() do
-		if child:IsA("ModuleScript") then require(child)(plr) end
-	end
-
-	if module:IsA("ModuleScript") then require(module)(plr) end
-end
-
-
+--[[
+	Helper function to fix the correct result of `CFrame.lookAt` in RPG series
+]]
 function HarukaLib:CFLookAt(pos1: Vector3, pos2: Vector3) : CFrame
 	local finalCFrame = CFrame.identity
 	local lookAt = CFrame.lookAt(pos1, pos2)
@@ -641,7 +750,15 @@ function HarukaLib:CFLookAt(pos1: Vector3, pos2: Vector3) : CFrame
 end
 
 
-function HarukaLib:ThreeDotNumberify(num: number | string) : string
+--[[
+	Helper function to format a number with comma separator
+
+	**Example:**
+	``````lua
+	HarukaLib:CommaifyNumber(123456789) -- "123,456,789"
+	``````
+]]
+function HarukaLib:CommaifyNumber(num: number | string) : string
 	if not num then return "" end
 
 	num = tostring(num)
@@ -656,7 +773,15 @@ function HarukaLib:ThreeDotNumberify(num: number | string) : string
 end
 
 
-function HarukaLib:FromNumberToTime(seconds: number) : string
+--[[
+	Helper function to format a number of seconds into a string of time format
+
+	**Example:**
+	``````lua
+	HarukaLib:TimeifyNumber(123) -- "02:03"
+	``````
+]]
+function HarukaLib:TimeifyNumber(seconds: number) : string
 	if seconds == nil then return "??:??" end
 	if seconds <= 0 then return "00:00" end
 
@@ -666,4 +791,5 @@ function HarukaLib:FromNumberToTime(seconds: number) : string
 	return string.format("%02d:%02d", minutes, secs)
 end
 
-return HarukaLib
+
+return table.freeze(HarukaLib)
