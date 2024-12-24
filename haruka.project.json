@@ -1,16 +1,9 @@
 {
-    "name": "Risk-of-Astra_HRojo",
+    "name": "HarukaLib_Rojo",
     "tree": {
         "$className": "DataModel",
 
-        "ReplicatedFirst": {
-            "$className": "ReplicatedFirst",
-            "$ignoreUnknownInstances": true,
 
-            "Preload_Haruka": {
-                "$path": "src/Preload.client.luau"
-            }
-        },
         "ReplicatedStorage": {
             "$className": "ReplicatedStorage",
             "$ignoreUnknownInstances": true,
@@ -19,16 +12,6 @@
                 "$className": "Folder",
                 "$ignoreUnknownInstances": true,
                 "$path": "src/shared"
-            }
-        },
-        "ServerScriptService": {
-            "$className": "ServerScriptService",
-            "$ignoreUnknownInstances": true,
-
-            "HarukaServer": {
-                "$className": "Folder",
-                "$ignoreUnknownInstances": true,
-                "$path": "src/server"
             }
         },
         "StarterPlayer": {
