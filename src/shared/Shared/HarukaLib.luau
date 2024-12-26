@@ -2,6 +2,7 @@
 
 local CAS = game:GetService("ContextActionService")
 local GuiService = game:GetService("GuiService")
+local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local RepS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -789,6 +790,16 @@ function HarukaLib:TimeifyNumber(seconds: number) : string
 	local secs = seconds % 60
 
 	return string.format("%02d:%02d", minutes, secs)
+end
+
+
+--[[
+	A quick shortcut to `string.sub(UUID, 1, 8)`
+
+	Example Output: `123e4567-e89b-12d3-a456-426655440000`
+]]
+function HarukaLib:GenerateUUID() : string
+	return string.sub(HttpService:GenerateGUID(false), 1, 8)
 end
 
 

@@ -1,67 +1,46 @@
 --!nocheck
 
-local GuiService = game:GetService("GuiService")
+local Screen3D = {}
+Screen3D.__index = Screen3D
 
-local Component3D = require(script.Component3D)
+local Part2D = require(script.Part2D)
 
-local screenGen = {}
-screenGen.__index = screenGen
 
-function screenGen.new(screenGui: ScreenGui, displayDistance: number)
-	local partIndex = {}
+function Screen3D.new(gui: ScreenGui, distance: number)
+    local part2dComponents = {}
 
-	local self = setmetatable({
-		partIndex = partIndex,
-		rootGui = screenGui,
-		displayDistance = displayDistance,
-		rootOffset = CFrame.new(),
-	}, screenGen)
+    local self = setmetatable({
+        Part2DComponents = part2dComponents,
+        Distance = distance,
 
-	for _, Component2D in screenGui:GetDescendants() do
-		if Component2D:IsA("GuiObject") then
-			partIndex[Component2D] = Component3D.new(Component2D, self)
-		end
-	end
+    }, Screen3D)
 
-	screenGui.DescendantAdded:Connect(function(AddedComponent: Instance)
-		if AddedComponent:IsA("GuiObject") then
-			partIndex[AddedComponent] = Component3D.new(AddedComponent, self)
-		end
+    --// bind
+    for _, element: Instance in gui:GetDescendants() do
+        if not element:IsA("GuiObject") then continue end
 
-		for _, Component2D in AddedComponent:GetDescendants() do
-			if Component2D:IsA("GuiObject") and not partIndex[Component2D] then
-				partIndex[Component2D] = Component3D.new(Component2D, self)
-			end
-		end
-	end)
+        part2dComponents[element] = Part2D.new(element, self)
+    end
+    gui.DescendantAdded:Connect(function(added: Instance)
+        if added:IsA("GuiObject") then
+            part2dComponents[added] = Part2D.new(added, self)
+        end
 
-	return self
-end
+        for _, element: GuiObject in added:GetDescendants() do
+            if element:IsA("GuiObject") and not part2dComponents[element] then
+                part2dComponents[element] = Part2D.new(element, self)
+            end
+        end
+    end)
 
-function screenGen:GetRealCanvasSize(): Vector2
-	return workspace.CurrentCamera.ViewportSize
-end
-
-function screenGen:GetInset(): Vector2
-	local inset = GuiService:GetGuiInset()
-	return inset
-end
-
-function screenGen:GetInsetCanvasSize(): Vector2
-	return self:GetRealCanvasSize() - self:GetInset()
-end
-
-function screenGen:GetIntendedCanvasSize(): Vector2
-	if self.rootGui.IgnoreGuiInset then
-		return self:GetRealCanvasSize()
-	end
-
-	return self:GetInsetCanvasSize()
-end
-
-function screenGen:GetComponent3D(Component2D)
-	return self.partIndex[Component2D]
+    return self
 end
 
 
-return screenGen
+--// Private
+
+function Screen3D:GetPart2D(guiObject: GuiObject)
+    return self.Part2DComponents[guiObject]
+end
+
+return Screen3D

@@ -100,14 +100,4 @@ function ClientUtil:OpenUIEx(plr: Player, targetUI: string)
     end
 end
 
-
-function ClientUtil:CombineRbxId(id: string?)
-    if not id then
-        warn("[ClientUtil]: Invalid Id")
-        return "rbxassetid://0"
-    end
-
-    return "rbxassetid://".. id
-end
-
 return ClientUtil
