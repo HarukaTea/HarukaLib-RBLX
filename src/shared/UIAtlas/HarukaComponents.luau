@@ -37,7 +37,7 @@ function HarukaComponents.HarukaScreenGui(scope: Fusion.Scope, guiProps: table?,
 	CenterProps: table?,
 	BottomProps: table?,
 	FullProps: table?
-}) : ScreenGui
+}?) : ScreenGui
 
 	local defaultTopProps = {
 		Name = "Top",

@@ -11,6 +11,7 @@ local function setup()
 	for _, module: ModuleScript in RepS.HarukaShared.UIAtlas:GetChildren() do
 		if not module:IsA("ModuleScript") then continue end
 		if module.Name == "HarukaComponents" then continue end
+		if string.find(module.Name, ".spec") then continue end
 
 		Promise.defer(function()
 			require(module)(plr)

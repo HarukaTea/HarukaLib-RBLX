@@ -13,26 +13,24 @@ local wait = task.wait
 
 return function (UI: ScreenGui, self: table)
     local scope = self.scope :: Fusion.Scope
-
-    --// Prompt
     local center = UI.Center :: Frame
 
-    table.insert(scope, center.PromptsFrame.ChildAdded:Connect(function(child)
+    table.insert(scope, center.Prompts.ChildAdded:Connect(function(child: Frame)
         if not child:IsA("Frame") then return end
 
-        HarukaLib:UITween(child, "In")
+        HarukaLib:UITween(child, "In", { TweenTime = 0.35 })
     end))
-    table.insert(scope, PPS.PromptHidden:Connect(function(prompt: ProximityPrompt)
-        local bar = PromptBar(prompt, 999, scope, self)
-        if not bar then return end
-        if center.PromptsFrame:FindFirstChild("Prompt_TweenProjectile") then return end
+    table.insert(scope, center.Prompts.ChildRemoved:Connect(function(child: Frame)
+        local bar = nil
 
+        if not bar then return end
+        if bar:HasTag("TweenProjectile") then return end
 
         local tweenUI = bar
         tweenUI.LayoutOrder = 999
         tweenUI.Name = "Prompt_TweenProjectile"
         tweenUI:AddTag("TweenProjectile")
-        tweenUI.Parent = center.PromptsFrame
+        tweenUI.Parent = center.Prompts
         Debris:AddItem(tweenUI, 0.15)
 
         wait()

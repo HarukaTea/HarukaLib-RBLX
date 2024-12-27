@@ -12,6 +12,7 @@ function Screen3D.new(gui: ScreenGui, distance: number)
     local self = setmetatable({
         Part2DComponents = part2dComponents,
         Distance = distance,
+        RootOffsetCFrame = CFrame.identity
 
     }, Screen3D)
 
@@ -34,6 +35,19 @@ function Screen3D.new(gui: ScreenGui, distance: number)
     end)
 
     return self
+end
+
+
+--[[
+    Set the root offset of all Part2D components.
+
+    **Example:**
+    ```lua
+    Screen3D:SetRootOffset(CFrame.Angles(0, math.rad(10), 0))
+    ```
+]]
+function Screen3D:SetRootOffset(offsetCFrame: CFrame)
+    self.RootOffsetCFrame = offsetCFrame
 end
 
 

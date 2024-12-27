@@ -3,72 +3,71 @@
 local RepS = game:GetService("ReplicatedStorage")
 local RS = game:GetService("RunService")
 
-local Components = require(RepS.HarukaShared.UIAtlas.Vanilla)
+local Components = require(RepS.HarukaShared.UIAtlas.HarukaComponents)
 local Fusion = require(RepS.HarukaShared.Shared.Fusion)
 local HarukaLib = require(RepS.HarukaShared.Shared.HarukaLib)
-
-local isMobile = HarukaLib:GetDevice() == "Mobile"
-
-local MobileShiftLock = {}
-MobileShiftLock.__index = MobileShiftLock
 
 local cfNew = CFrame.new
 local v2New = Vector2.new
 local fromScale = UDim2.fromScale
 
 
-function MobileShiftLock:SetLockState(state: string)
-	if state == "On" then
-		self.enabled = true
-		self.icon:set(self.ON_ICON)
+return function(plr: Player)
+	if not HarukaLib:GetDevice() == "Mobile" then return end
 
-		self.camera.CFrame *= cfNew(1.7, 0, 0)
-	else
-		self.enabled = false
-		self.icon:set(self.OFF_ICON)
+	local scope = Fusion.scoped({})
 
-		self.camera.CFrame *= cfNew(-1.7, 0, 0)
-	end
-end
+	local camera = workspace.CurrentCamera
+	local char = plr.Character or plr.CharacterAdded:Wait()
 
-function MobileShiftLock:EnableShiftLock()
-	if self.enabled then
-		--- store variables to reduce index time spent in RenderStepped
-		self.rsConnection = RS.RenderStepped:Connect(function()
-			if not self.char then return end
-			if not self.char.PrimaryPart then return end
+	local rsConnection, enabled = nil, false
+	local ON_ICON, OFF_ICON = "rbxasset://textures/ui/mouseLock_on.png", "rbxasset://textures/ui/mouseLock_off.png"
 
-			self.char.Humanoid.AutoRotate = not self.enabled
+	local icon = Fusion.Value(scope, OFF_ICON)
 
-			if self.enabled and not self.char.Humanoid.Sit then
-				self.char.PrimaryPart.CFrame = cfNew(self.char.PrimaryPart.Position, Vector3.new(
-					self.camera.CFrame.LookVector.X * 159940,
-					self.char.PrimaryPart.Position.Y,
-					self.camera.CFrame.LookVector.Z * 159940
+	--// Helper functions
+
+	local function _enableShiftLock()
+		if not enabled then return end
+
+		rsConnection = RS.RenderStepped:Connect(function()
+			if not char then return end
+			if not char.PrimaryPart then return end
+
+			local HRP = char.PrimaryPart
+
+			char.Humanoid.AutoRotate = not enabled
+
+			if enabled and not char.Humanoid.Sit then
+				HRP.CFrame = cfNew(HRP.Position, Vector3.new(
+					camera.CFrame.LookVector.X * 159940,
+					HRP.Position.Y,
+					camera.CFrame.LookVector.Z * 159940
 				))
 			end
-			if not self.enabled then
-				if self.rsConnection then self.rsConnection:Disconnect() end
+			if not enabled then
+				if rsConnection then rsConnection:Disconnect() end
 			end
 		end)
 	end
-end
+	local function _setLockState(state: "On" | "Off")
+		if state == "On" then
+			enabled = true
 
-return function(plr: Player)
-	if not isMobile then return end
+			icon:set(ON_ICON)
+			camera.CFrame *= cfNew(1.7, 0, 0)
 
-	local self = setmetatable({}, MobileShiftLock)
-	local scope = Fusion.scoped({})
+			_enableShiftLock()
+		else
+			enabled = false
+			icon:set(OFF_ICON)
 
-	self.camera = workspace.CurrentCamera
-	self.char = plr.Character or plr.CharacterAdded:Wait()
+			camera.CFrame *= cfNew(-1.7, 0, 0)
+		end
+	end
 
-	self.rsConnection, self.enabled = nil, false
-	self.ON_ICON, self.OFF_ICON = "rbxasset://textures/ui/mouseLock_on.png", "rbxasset://textures/ui/mouseLock_off.png"
 
-	self.icon = Fusion.Value(scope, self.OFF_ICON)
-
-	Components.ScreenGui(scope, {
+	Components.HarukaScreenGui(scope, {
 		Name = "MobileShiftLock",
 		DisplayOrder = 10,
 		Parent = plr:FindFirstChildOfClass("PlayerGui"),
@@ -85,13 +84,12 @@ return function(plr: Player)
 
 					Components.HoverImageButton(scope, {
 						Image = Fusion.Computed(scope, function(use: Fusion.Use)
-							return use(self.icon)
+							return use(icon)
 						end),
 
 						[Fusion.OnEvent("MouseButton1Click")] = function()
-							if self.char:FindFirstChild("Humanoid") and self.char.PrimaryPart then
-								self:SetLockState(if self.enabled then "Off" else "On")
-								self:EnableShiftLock()
+							if char:FindFirstChild("Humanoid") and char.PrimaryPart then
+								_setLockState(if enabled then "Off" else "On")
 							end
 						end,
 					}),
@@ -103,11 +101,9 @@ return function(plr: Player)
 	---// Clear
 
 	local function clearGarbage()
-		self:SetLockState("Off")
+		_setLockState("Off")
 
 		Fusion.doCleanup(scope)
-
-		self = nil
 	end
-	self.char.Humanoid.Died:Once(clearGarbage)
+	char.Humanoid.Died:Once(clearGarbage)
 end

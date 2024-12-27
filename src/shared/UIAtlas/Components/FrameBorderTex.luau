@@ -1,7 +1,7 @@
 
 local RepS = game:GetService("ReplicatedStorage")
 
-local UIAtlas = require(RepS.HarukaShared.UIAtlas.Vanilla)
+local UIAtlas = require(RepS.HarukaShared.UIAtlas.HarukaComponents)
 local Fusion = require(RepS.HarukaShared.Shared.Fusion)
 
 local Children = Fusion.Children
@@ -32,7 +32,7 @@ local pattern = {
 return function(scope: Fusion.Scope)
     return UIAtlas.Frame(scope, {
         ZIndex = 0,
-        Name = "GArrow_TexBG",
+        Name = "FrameBorderTex",
 
         [Children] = {
             Fusion.ForPairs(scope, pattern, function(_, localScope: Fusion.Scope, id: string, data: table)

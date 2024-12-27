@@ -21,7 +21,7 @@ return function(plr: Player)
 	Pinia(self)
 
 	local scope = self.scope :: Fusion.Scope
-	Components.HarukaScreenGui(scope, {
+	local UI; UI = Components.HarukaScreenGui(scope, {
 		Name = "ExplorerNotify",
 		DisplayOrder = 1000,
 		Parent = plr:FindFirstChildOfClass("PlayerGui"),
@@ -117,10 +117,36 @@ return function(plr: Player)
 					}
 				})
 			}
+		},
+
+		CenterProps = {
+			Components.Frame(scope, {
+				Name = "CenterNotify",
+				Size = fromScale(1, 0.8),
+				BackgroundTransparency = 0.15,
+
+				Visible = Fusion.Computed(scope, function(use: Fusion.Use)
+					local isVisible = if use(self.centerText) ~= "" then true else false
+
+					return isVisible
+				end),
+
+				[Children] = {
+					Components.TextLabel(scope, {
+						Name = "CenterText",
+
+						Text = Fusion.Computed(scope, function(use: Fusion.Use)
+							return use(self.centerText)
+						end),
+
+						[Children] = { Components.UIPadding(scope, {}) }
+					}),
+				}
+			})
 		}
 	})
 
-	Anims(self)
+	Anims(UI, self)
 
 	--// Clear
 

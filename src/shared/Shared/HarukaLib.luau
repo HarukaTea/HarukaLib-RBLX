@@ -276,6 +276,9 @@ function HarukaLib.Bin()
 			elseif typeof(item.Destroy) == "function" then
 				item:Destroy()
 
+			elseif typeof(item.Cancel) == "function" then
+				item:Cancel()
+
 			--- cancel any exist promises
 			elseif getmetatable(item) then
 				if item.prototype then item:cancel() end

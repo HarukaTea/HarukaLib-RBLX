@@ -1,34 +1,42 @@
---!nocheck
 
 local RepS = game:GetService("ReplicatedStorage")
 
 local Components = require(RepS.HarukaShared.UIAtlas.HarukaComponents)
-local HarukaLib = require(RepS.HarukaShared.Shared.HarukaLib)
 local Fusion = require(RepS.HarukaShared.Shared.Fusion)
+
+local UILab = require(RepS.HarukaShared.Shared.UILabs)
 
 local Children = Fusion.Children
 
-local v2New = Vector2.new
 local fromScale = UDim2.fromScale
+local v2New = Vector2.new
 
-return function (scope: Fusion.Scope, props: {
-    PromptObject: ProximityPrompt,
-    LayoutOrder: number,
-    CurrentPromptIndex: Fusion.Value,
+return UILab.CreateFusionStory({
+    fusion = Fusion,
+    controls = {
+        CurrentPromptIndex = UILab.Slider(1, 1, 2, 1),
+        ActionText = "Interact",
 
-}) : Frame
+        Platform = UILab.Choose({ "PC", "Mobile", "Console" })
+    },
 
-    props.Platform = HarukaLib:GetDevice()
+}, function(props)
+    local scope = props.scope
 
-    return Components.Frame(scope, {
+    props.LayoutOrder = 1
+    props.PromptObject = Instance.new("ProximityPrompt")
+
+    props.PromptObject.KeyboardKeyCode = Enum.KeyCode.F
+
+    local component = Components.Frame(scope, {
         Name = "Prompt",
         BackgroundTransparency = 0,
         Size = fromScale(0.18, 0.1),
-        LayoutOrder = props.LayoutOrder,
+        LayoutOrder = props.controls.LayoutOrder,
         Parent = props.target,
 
         BackgroundColor3 = Fusion.Tween(scope, Fusion.Computed(scope, function(use: Fusion.Use)
-            return if use(props.CurrentPromptIndex) == props.LayoutOrder then Color3.new(1, 1, 1) else Color3.new()
+            return if use(props.controls.CurrentPromptIndex) == props.LayoutOrder then Color3.new(1, 1, 1) else Color3.new()
         end), TweenInfo.new(0.2)),
 
         [Children] = {
@@ -51,7 +59,7 @@ return function (scope: Fusion.Scope, props: {
                 Image = "rbxassetid://13124035950",
 
                 ImageColor3 = Fusion.Computed(scope, function(use: Fusion.Use)
-                    return if use(props.CurrentPromptIndex) == props.LayoutOrder then Color3.new() else Color3.new(1, 1, 1)
+                    return if use(props.controls.CurrentPromptIndex) == props.LayoutOrder then Color3.new() else Color3.new(1, 1, 1)
                 end),
             }),
             Components.TextLabel(scope, {
@@ -59,11 +67,11 @@ return function (scope: Fusion.Scope, props: {
                 AnchorPoint = v2New(0, 0.5),
                 Position = fromScale(0.19, 0.5),
                 Size = fromScale(0.77, 0.7),
-                Text = props.ActionText,
+                Text = props.controls.ActionText,
 		        TextXAlignment = Enum.TextXAlignment.Left,
 
                 TextColor3 = Fusion.Computed(scope, function(use: Fusion.Use)
-                    return if use(props.CurrentPromptIndex) == props.LayoutOrder then Color3.new() else Color3.new(1, 1, 1)
+                    return if use(props.controls.CurrentPromptIndex) == props.LayoutOrder then Color3.new() else Color3.new(1, 1, 1)
                 end),
             }),
             Components.HoverImageButton(scope, {
@@ -81,7 +89,7 @@ return function (scope: Fusion.Scope, props: {
                 Image = "rbxassetid://118166707173137",
 
                 Visible = Fusion.Computed(scope, function(use: Fusion.Use)
-                    return use(props.CurrentPromptIndex) == props.LayoutOrder and props.Platform == "Mobile"
+                    return use(props.controls.CurrentPromptIndex) == props.LayoutOrder and use(props.controls.Platform) == "Mobile"
                 end),
             }),
             Components.TextLabel(scope, {
@@ -96,13 +104,13 @@ return function (scope: Fusion.Scope, props: {
                 TextColor3 = Color3.new(),
 
                 Visible = Fusion.Computed(scope, function(use: Fusion.Use)
-                    return use(props.CurrentPromptIndex) == props.LayoutOrder and props.Platform ~= "Mobile"
+                    return use(props.controls.CurrentPromptIndex) == props.LayoutOrder and use(props.controls.Platform) ~= "Mobile"
                 end),
-                Text = Fusion.Computed(scope, function()
-                    if props.Platform == "PC" then
+                Text = Fusion.Computed(scope, function(use: Fusion.Use)
+                    if use(props.controls.Platform) == "PC" then
                         return props.PromptObject.KeyboardKeyCode.Name
 
-                    elseif props.Platform == "Console" then
+                    elseif use(props.controls.Platform) == "Console" then
                         return string.sub(props.PromptObject.GamepadKeyCode.Name, 7)
                     end
 
@@ -116,4 +124,4 @@ return function (scope: Fusion.Scope, props: {
             })
         }
     })
-end
+end)

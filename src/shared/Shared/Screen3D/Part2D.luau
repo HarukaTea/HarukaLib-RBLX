@@ -15,6 +15,7 @@ function Part2D.new(element: GuiObject, ancestorModule: table)
         Element = element,
         RootGui = element:FindFirstAncestorOfClass("ScreenGui"),
         Screen3DModule = ancestorModule,
+        OffsetCFrame = CFrame.identity
 
     }, Part2D)
 
@@ -89,6 +90,18 @@ function Part2D:Disable()
     self.Empty()
 end
 
+--[[
+    Set the offset of the Part in the 3D space.
+
+    **Example:**
+    ```lua
+    Part2D:SetOffset(CFrame.Angles(0, math.rad(10), 0))
+    ```
+]]
+function Part2D:SetOffset(offsetCFrame: CFrame)
+    self.OffsetCFrame = offsetCFrame
+end
+
 
 --// Private functions
 
@@ -138,7 +151,7 @@ function Part2D:GetWorldCFrame() : CFrame
 
         oriCFrame = workspace.CurrentCamera.CFrame
             * CFrame.new(0, 0, -(self.Screen3DModule.Distance) / 2)
-            * CFrame.identity
+            * self.Screen3DModule.RootOffsetCFrame
 
         udPos = UDim2.fromOffset(VPDiff.X / 2, VPDiff.Y / 2)
         addedPosition = self:Udim2ToCFrame(udPos) * self:Udim2ToCFrame(UDim2.fromScale(1, 1))
@@ -150,7 +163,7 @@ function Part2D:GetWorldCFrame() : CFrame
         * self:Udim2ToCFrame(self.Element.Position)
         * udMax
 
-    return finalCFrame * self:GetPartPivot(finalCFrame, finalPivot, CFrame.identity)
+    return finalCFrame * self:GetPartPivot(finalCFrame, finalPivot, self.OffsetCFrame)
 end
 
 --// Helper private functions

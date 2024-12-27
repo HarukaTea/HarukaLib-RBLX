@@ -9,9 +9,8 @@ local HarukaLib = require(RepS.HarukaShared.Shared.HarukaLib)
 local Bindables = RepS.HarukaShared.UIAtlas.Bindables
 local Events = RepS.HarukaShared.UIAtlas.Events
 
-
-local function HintsPinia(self: table)
-    self.scope = Fusion.scoped({})
+return function (self: table)
+	self.scope = Fusion.scoped({})
 
     local function Value(val: any) : any
         return Fusion.Value(self.scope, val)
@@ -59,5 +58,3 @@ local function HintsPinia(self: table)
 	table.insert(scope, Bindables.CreateNotify.Event:Connect(_createHint))
 	table.insert(scope, Bindables.CreateFSNotify.Event:Connect(_createFSHint))
 end
-
-return HintsPinia
