@@ -39,6 +39,8 @@ function HarukaComponents.HarukaScreenGui(scope: Fusion.Scope, guiProps: table?,
 	FullProps: table?
 }?) : ScreenGui
 
+	childProps = childProps or {}
+
 	local defaultTopProps = {
 		Name = "Top",
 		AnchorPoint = v2New(0.5, 0),

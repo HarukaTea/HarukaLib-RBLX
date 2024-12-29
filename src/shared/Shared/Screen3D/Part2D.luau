@@ -46,8 +46,12 @@ function Part2D:Enable()
     bindPart.CanQuery = false
     bindPart.CanTouch = false
     bindPart.Transparency = 1
+    bindPart.Massless = true
+    bindPart.CastShadow = false
     bindPart.Parent = surfaceGui
 
+    surfaceGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    surfaceGui.Name = self.Element.Name.."_Part2D"
     surfaceGui.Face = Enum.NormalId.Back
     surfaceGui.AlwaysOnTop = true
     surfaceGui.LightInfluence = 0
@@ -85,10 +89,22 @@ function Part2D:Disable()
     if not self.IsEnabled then return end
 
     self.IsEnabled = false
-    if self.Element then self.Element.Parent = self.ParentElement or self.RootGui end
+    pcall(function()
+        if self.Element then self.Element.Parent = self.ParentElement or self.RootGui end
+    end)
 
     self.Empty()
 end
+
+
+--[[
+    Destroy and clear the Part2D.
+]]
+function Part2D:Destroy()
+    self:Disable()
+    self = nil
+end
+
 
 --[[
     Set the offset of the Part in the 3D space.

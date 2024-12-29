@@ -51,6 +51,18 @@ function Screen3D:SetRootOffset(offsetCFrame: CFrame)
 end
 
 
+--[[
+    Cleanup all Part2D components.
+]]
+function Screen3D:Destroy()
+    for _, part2d in self.Part2DComponents do
+        if part2d and part2d.Destroy then
+            part2d:Destroy()
+        end
+    end
+end
+
+
 --// Private
 
 function Screen3D:GetPart2D(guiObject: GuiObject)
