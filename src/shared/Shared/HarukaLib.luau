@@ -279,6 +279,9 @@ function HarukaLib.Bin()
 			elseif typeof(item.Cancel) == "function" then
 				item:Cancel()
 
+			elseif typeof(item.cancel) == "function" then
+				item:cancel()
+
 			--- cancel any exist promises
 			elseif getmetatable(item) then
 				if item.prototype then item:cancel() end
@@ -660,7 +663,7 @@ function HarukaLib:BanPlayer(plr: Player, properties: {
 		Players:BanAsync(config)
 
 	end):catch(function(err)
-		warn(err)
+		warn(tostring(err))
 	end)
 end
 
