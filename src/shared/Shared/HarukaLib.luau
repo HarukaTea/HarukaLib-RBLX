@@ -809,4 +809,46 @@ function HarukaLib:GenerateUUID() : string
 end
 
 
+--[[
+	Similar with `PartCache`, but a lot simpler and faster.
+
+	Returns:
+	```lua
+	local pool = HarukaLib.CreatePartPool(obj, initialAmount)
+
+	pool:Get()
+	pool:Return(obj)
+	```
+]]
+function HarukaLib.CreatePartPool(obj: Instance, initialAmount: number?)
+	local DISTANT_CF = CFrame.new(Vector3.one * 1599 * 40)
+
+	local pool = {
+		Object = obj:Clone(),
+		Available = {},
+	}
+	for i = 1, initialAmount or 1 do
+		pool.Available[i] = pool.Object:Clone()
+	end
+
+	function pool:Get()
+		local i = #pool.Available
+		local t_obj = pool.Available[i]
+		if t_obj then
+			table.remove(pool.Available, i)
+			return obj
+		else
+			return pool.Object:Clone()
+		end
+	end
+	function pool:Return(object: Instance)
+		object.CFrame = DISTANT_CF
+
+		table.insert(pool.Available, object)
+	end
+
+	return pool
+end
+
+
 return table.freeze(HarukaLib)
