@@ -2,7 +2,7 @@
 
 local RunService = game:GetService("RunService")
 
-local Terrain = workspace:FindFirstChildOfClass("Terrain")
+local Terrain = workspace.Terrain
 
 local OFFSET = Vector3.new(0, 0.1, 0)
 

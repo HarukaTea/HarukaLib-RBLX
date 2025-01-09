@@ -35,8 +35,6 @@ local function _moveNPC(self: table)
 	self.Humanoid:MoveTo(self.Waypoints[self.CurWaypoint].Position)
 end
 local function _moveToFinished(self: table, isReached: boolean)
-    if not getmetatable(self) then return end
-
     if isReached and self.CurWaypoint + 1 <= #self.Waypoints then
         if self.CurWaypoint + 1 < #self.Waypoints then
             _invokeWaypointReached(self)
@@ -47,9 +45,9 @@ local function _moveToFinished(self: table, isReached: boolean)
 
     elseif isReached then
         _disconnectMoveConns(self)
+
         self.Status = "Idle"
         self.Events.Reached:Fire(self.NPC, self.Waypoints[self.CurWaypoint])
-
     else
         _disconnectMoveConns(self)
         self.Status = "Idle"
@@ -63,10 +61,8 @@ local function _comparePosition(self: table)
 	self.Position.StuckCount = ((self.NPC.PrimaryPart.Position - self.Position.LastPos).Magnitude <= 0.07 and (self.Position.StuckCount + 1)) or 0
 	self.Position.LastPos = self.NPC.PrimaryPart.Position
 
-	if self.Position.StuckCount >= self._settings.COMPARISON_CHECKS then
-		if self._settings.JUMP_WHEN_STUCK then
-			_setJumpState(self.Humanoid)
-		end
+	if self.Position.StuckCount >= self.Settings.ComparisonCheckTimes then
+		_setJumpState(self.Humanoid)
 
         self.Events.Errored:Fire("AgentStuck")
 	end
@@ -75,13 +71,10 @@ end
 
 --// Constructor
 function PathCreator.new(npc: Model, pfsArgs: table)
-    if not npc:IsA("Model") or not npc:FindFirstChild("Humanoid") then return end
-
     local self = setmetatable({
         Settings = {
             TimeLimit = 0.07,
-            ComparisonCheckTimes = 1,
-            JumpWhenStuck = true
+            ComparisonCheckTimes = 1
         },
         Events = {
             Errored = Signal.new(),
@@ -95,7 +88,7 @@ function PathCreator.new(npc: Model, pfsArgs: table)
         Humanoid = npc.Humanoid,
         PathObj = PFS:CreatePath(pfsArgs),
         Status = "Idle",
-        lastTick = 0,
+        LastTick = 0,
         Position = {
             LastPos = Vector3.zero,
             StuckCount = 0
@@ -117,7 +110,7 @@ function PathCreator.new(npc: Model, pfsArgs: table)
 end
 
 --// Start to let npc follow the path
-function PathCreator:Run(targetPos: Vector3)
+function PathCreator:Run(targetPos: Vector3, previousAsyncResult: boolean)
     if not targetPos then return end
 
     --// limit the computation
@@ -129,20 +122,15 @@ function PathCreator:Run(targetPos: Vector3)
 		self.LastTick = os.clock()
 	end
 
-    local pathComputed, _ = pcall(function()
-        self.PathObj:ComputeAsync(self.NPC.PrimaryPart.Position, targetPos)
-    end)
-
-    --// make sure path computation is successful
-    if not pathComputed
-        or self.PathObj.Status == Enum.PathStatus.NoPath
-        or #self.PathObj:GetWaypoints() < 2
-        or (self.Humanoid and self.Humanoid:GetState() == Enum.HumanoidStateType.Freefall) then
-
+    if previousAsyncResult == nil then
+        previousAsyncResult = self:IsPathValid(targetPos)
+    end
+    if previousAsyncResult == false then
         task.wait()
         self.Events.Errored:Fire("ComputationError")
         return
     end
+
 
     --// pathfinding starts
     self.Status = (self.Humanoid and "Active") or "Idle"
@@ -188,6 +176,27 @@ function PathCreator:Stop()
 end
 
 
+--[[
+    Help compute whether the path is ok for npcs
+]]
+function PathCreator:IsPathValid(targetPos: Vector3)
+    local pathComputed, _ = pcall(function()
+        self.PathObj:ComputeAsync(self.NPC.PrimaryPart.Position, targetPos)
+    end)
+
+    --// make sure path computation is successful
+    if not pathComputed
+        or self.PathObj.Status == Enum.PathStatus.NoPath
+        or #self.PathObj:GetWaypoints() < 2
+        or (self.Humanoid and self.Humanoid:GetState() == Enum.HumanoidStateType.Freefall) then
+
+        return false
+    end
+
+    return true
+end
+
+
 --// Clears the path object
 function PathCreator:Destroy()
     for _, event: Signal in self.Events do
@@ -195,8 +204,7 @@ function PathCreator:Destroy()
     end
     self.PathObj:Destroy()
 
-    setmetatable(self, nil)
-    for i, _ in self do
-        self[i] = nil
-    end
+    self = nil
 end
+
+return PathCreator

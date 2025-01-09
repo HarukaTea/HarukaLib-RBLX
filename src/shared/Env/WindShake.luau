@@ -1,10 +1,9 @@
 --!nocheck
 
 local CollectionService = game:GetService("CollectionService")
-local RepS = game:GetService("ReplicatedStorage")
 local RS = game:GetService("RunService")
 
-local VectorMap = require(RepS.HarukaShared.Shared.Libs.VectorMap)
+local VectorMap = require(script.Parent.VectorMap)
 
 local COLLECTION_TAG = "WindShake"
 
@@ -137,6 +136,7 @@ function WindShake:Update(deltaTime: number)
 
 	self.Active = active
 
+	task.synchronize()
 	workspace:BulkMoveTo(partList, cframeList, Enum.BulkMoveMode.FireCFrameChanged)
 end
 
@@ -158,7 +158,7 @@ function WindShake:Resume()
 	end
 
 	-- Connect updater
-	self.UpdateConnection = RS.Heartbeat:Connect(function(dt)
+	self.UpdateConnection = RS.Heartbeat:ConnectParallel(function(dt)
 		self:Update(dt)
 	end)
 end
