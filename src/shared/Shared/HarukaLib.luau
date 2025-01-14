@@ -1,6 +1,7 @@
 --!nocheck
 
 local CAS = game:GetService("ContextActionService")
+local Debris = game:GetService("Debris")
 local GuiService = game:GetService("GuiService")
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
@@ -823,20 +824,23 @@ end
 function HarukaLib.CreatePartPool(obj: Instance, initialAmount: number?)
 	local DISTANT_CF = CFrame.new(Vector3.one * 1599 * 40)
 
+	initialAmount = initialAmount or 1
+	initialAmount = math.ceil(initialAmount)
+
 	local pool = {
 		Object = obj:Clone(),
 		Available = {},
 	}
-	for i = 1, initialAmount or 1 do
-		pool.Available[i] = pool.Object:Clone()
+	for _ = 1, initialAmount do
+		table.insert(pool.Available, pool.Object:Clone())
 	end
 
 	function pool:Get()
 		local i = #pool.Available
-		local t_obj = pool.Available[i]
-		if t_obj then
-			table.remove(pool.Available, i)
-			return obj
+		local finalObj = pool.Available[i]
+		if finalObj then
+			finalObj = table.remove(pool.Available, i)
+			return finalObj
 		else
 			return pool.Object:Clone()
 		end
@@ -848,6 +852,21 @@ function HarukaLib.CreatePartPool(obj: Instance, initialAmount: number?)
 	end
 
 	return pool
+end
+
+
+--[[
+	A helper function to quickly tween out an existing UI
+]]
+function HarukaLib:TweenOutUI(ui: GuiObject, callback: () -> nil)
+	local tweenOutUI = ui:Clone()
+    tweenOutUI.Parent = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
+
+    Debris:AddItem(tweenOutUI, 1)
+
+	if callback then callback() end
+
+    HarukaLib:UITween(tweenOutUI, "Out")
 end
 
 
