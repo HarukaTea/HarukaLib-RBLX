@@ -558,7 +558,7 @@ function HarukaLib:PlayCutscene(pointsFolder: Folder, duration: number)
 	table.sort(instances, function(a, b)
 		return tonumber(a.Name) < tonumber(b.Name)
 	end)
-	for _, point: BasePart in ipairs(instances) do
+	for _, point: BasePart in instances do
 		table.insert(points, point.CFrame)
 	end
 
@@ -877,6 +877,7 @@ function HarukaLib:CopyTableExcept(t: table, except: { string }) : table
 	local newT = {}
 
     for key, val in t do
+		if typeof(val) == "function" then continue end
         if table.find(except, key) then continue end
 
         newT[key] = val
