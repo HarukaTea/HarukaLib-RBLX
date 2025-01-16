@@ -877,7 +877,6 @@ function HarukaLib:CopyTableExcept(t: table, except: { string }) : table
 	local newT = {}
 
     for key, val in t do
-        if typeof(val) == "function" then continue end
         if table.find(except, key) then continue end
 
         newT[key] = val
