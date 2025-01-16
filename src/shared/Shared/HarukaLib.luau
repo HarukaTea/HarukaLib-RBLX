@@ -870,4 +870,21 @@ function HarukaLib:TweenOutUI(ui: GuiObject, callback: () -> nil)
 end
 
 
+--[[
+	A helper function to filter a table, to prevent cyclical table references
+]]
+function HarukaLib:CopyTableExcept(t: table, except: { string }) : table
+	local newT = {}
+
+    for key, val in t do
+        if typeof(val) == "function" then continue end
+        if table.find(except, key) then continue end
+
+        newT[key] = val
+    end
+
+    return newT
+end
+
+
 return table.freeze(HarukaLib)
