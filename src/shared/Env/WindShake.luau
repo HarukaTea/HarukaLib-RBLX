@@ -19,6 +19,8 @@ local WindShake = {
 
 	_partList = table.create(500),
 	_cframeList = table.create(500),
+
+	Settings = {}
 }
 
 export type WindShakeSettings = {
@@ -86,6 +88,7 @@ function WindShake:Update(deltaTime: number)
 		local jitter = (1 / math.random(60, 120))
 		local refreshRate = (slowerDeltaTime * distanceAlphaSq) + maxRefreshRate
 
+
 		if (now - lastUpdate) + jitter <= refreshRate then
 			-- It is not yet time to update
 			return
@@ -94,17 +97,17 @@ function WindShake:Update(deltaTime: number)
 		objMeta.LastUpdate = now
 		active += 1
 
-		local wdirection = script:GetAttribute("WindDirection")
+		local wdirection = self.Settings.WindDirection
 		if wdirection.Magnitude < 1e-5 then
 			return
 		end
 
-		local amp = script:GetAttribute("WindPower") * 0.2
-		if script:GetAttribute("WindPower") * 0.2 < 1e-5 then
+		local amp = self.Settings.WindPower * 0.2
+		if self.Settings.WindPower * 0.2 < 1e-5 then
 			return
 		end
 
-		local freq = now * (script:GetAttribute("WindSpeed") * 0.08)
+		local freq = now * (self.Settings.WindSpeed * 0.08)
 		if freq < 1e-5 then
 			return
 		end
@@ -168,7 +171,7 @@ function WindShake:Init(config: { MatchWorkspaceWind: boolean? })
 		return
 	end
 	for key: string, value: any in config do
-		script:SetAttribute(key, value)
+		self.Settings[key] = value
 	end
 
 	-- Clear any old stuff.
