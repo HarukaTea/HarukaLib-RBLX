@@ -56,7 +56,7 @@ local function _getDecentTween(oldPos: UDim2, sliderElement: GuiObject, sliderEl
     sliderElement.AnchorPoint = desiredAnchor
     sliderElement.Position = oldPos
 
-    return TS:Create(sliderElement, TweenInfo.new(0.2, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
+    return TS:Create(sliderElement, TweenInfo.new(0.1, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
         Position = correctPos
     })
 end
@@ -80,8 +80,7 @@ function Slider.new(element: GuiObject, props: Props?) : table
         MinVal = props.MinVal or 0,
         MaxVal = props.MaxVal or 1,
     }
-
-    finalProps.DefaultVal = (finalProps.MaxVal + finalProps.MinVal) / 2
+    finalProps.DefaultVal = props.DefaultVal or (finalProps.MaxVal + finalProps.MinVal) / 2
 
     local self = setmetatable({
         SliderElement = element,
@@ -96,8 +95,7 @@ function Slider.new(element: GuiObject, props: Props?) : table
     self.Add, self.Empty = HarukaLib.Bin()
     self.Add(self.SliderMoved)
 
-    self:SetPosition(UDim2.fromScale( (finalProps.DefaultVal - finalProps.MinVal) / finalProps.MaxVal, 0.5), false)
-
+    self:SetVal(finalProps.DefaultVal)
 
     return self
 end
@@ -139,8 +137,7 @@ function Slider:Enable()
     end
 
     self.Add(mouse.Move:Connect(_move))
-    self.Add(UIS.InputBegan:Connect(function(input, GPE)
-        if GPE then return end
+    self.Add(UIS.InputBegan:Connect(function(input)
         if input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
 
         if not _isMouseInsideSlider() then return end
@@ -149,8 +146,7 @@ function Slider:Enable()
 
         _move()
     end))
-    self.Add(UIS.InputEnded:Connect(function(input, GPE)
-        if GPE then return end
+    self.Add(UIS.InputEnded:Connect(function(input)
         if input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
 
         self.IsMouseDown = false
@@ -161,7 +157,7 @@ end
 --[[
     Disable the slider and stop tracking the movement.
 ]]
-function Slider:Disable()
+function Slider:Destroy()
     self.Empty()
 end
 
@@ -194,6 +190,7 @@ end
 
 function Slider:SetPosition(pos: UDim2, isForced: boolean, element: GuiObject?)
     element = element or self.SliderElement
+
     pos = UDim2.fromScale(_round(pos.X.Scale, self.RoundPercentage), _round(pos.Y.Scale, self.RoundPercentage))
 
     local elementAnchor, elementPos = element.AnchorPoint, element.Position
@@ -204,6 +201,7 @@ function Slider:SetPosition(pos: UDim2, isForced: boolean, element: GuiObject?)
     element.Position = pos
     element.AnchorPoint = Vector2.new(0.5, 0.5)
 
+
     if element == self.SliderElement and self.TweenObject then self.TweenObject:Cancel() end
 
     self.TweenObject = _getDecentTween(elementPos, element, element.Parent, elementAnchor)
@@ -213,7 +211,7 @@ function Slider:SetPosition(pos: UDim2, isForced: boolean, element: GuiObject?)
         self.TweenObject.Completed:Wait()
 
         self.LastPos = pos
-        self.Moved:Fire(isForced)
+        self.SliderMoved:Fire(isForced)
     end
 end
 
