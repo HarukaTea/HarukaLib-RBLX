@@ -789,14 +789,26 @@ end
 	HarukaLib:TimeifyNumber(123) -- "02:03"
 	``````
 ]]
-function HarukaLib:TimeifyNumber(seconds: number) : string
+function HarukaLib:TimeifyNumber(seconds: number, shouldScaleToMs: boolean?) : string
 	if seconds == nil then return "??:??" end
 	if seconds <= 0 then return "00:00" end
 
 	local minutes = math.floor(seconds / 60)
 	local secs = seconds % 60
 
-	return string.format("%02d:%02d", minutes, secs)
+	if not shouldScaleToMs then
+		return string.format("%02d:%02d", minutes, secs)
+	else
+		local ms = seconds * 1000
+		minutes = math.floor(ms / 60000)
+
+		ms %= 60000
+		seconds = math.floor(ms / 1000)
+
+		ms %= 1000
+
+		return string.format("%d:%02d.%03d", minutes, seconds, ms)
+	end
 end
 
 
@@ -858,13 +870,13 @@ end
 --[[
 	A helper function to quickly tween out an existing UI
 ]]
-function HarukaLib:TweenOutUI(ui: GuiObject, callback: () -> nil)
+function HarukaLib:TweenOutUI(ui: GuiObject, callback: (tweenOutUI: GuiObject) -> nil)
 	local tweenOutUI = ui:Clone()
     tweenOutUI.Parent = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
 
     Debris:AddItem(tweenOutUI, 1)
 
-	if callback then callback() end
+	if callback then callback(tweenOutUI) end
 
     HarukaLib:UITween(tweenOutUI, "Out")
 end
@@ -873,17 +885,89 @@ end
 --[[
 	A helper function to filter a table, to prevent cyclical table references
 ]]
-function HarukaLib:CopyTableExcept(t: table, except: { string }) : table
+function HarukaLib:CopyTableExcept(t: table, except: { string }, shouldIncludeFunc: boolean?) : table
 	local newT = {}
 
     for key, val in t do
-		if typeof(val) == "function" then continue end
+		if not shouldIncludeFunc then
+			if typeof(val) == "function" then continue end
+		end
         if table.find(except, key) then continue end
 
         newT[key] = val
     end
 
     return newT
+end
+
+
+--[[
+	A simple function of Queue
+]]
+function HarukaLib.Queue()
+	local Queue = {}
+	Queue.__index = Queue
+
+	function Queue.new(): Queue<T>
+		local self = setmetatable({
+			_first = 0,
+			_last = -1,
+			_queue = {},
+			_isBusy = false,
+
+			ElementAdded = Signal.new(),
+			ElementRemoved = Signal.new()
+
+		}, Queue)
+
+		return self
+	end
+
+
+	function Queue:IsEmpty() : boolean
+		return self._first > self._last
+	end
+	function Queue:IsBusy() : boolean
+		return self._isBusy
+	end
+	function Queue:SetBusyState(state: boolean)
+		self._isBusy = state or false
+	end
+
+
+	function Queue:Push(value: any)
+		local last = self._last + 1
+		self._last = last
+		self._queue[last] = value
+
+		if not self:IsBusy() then
+			self.ElementAdded:Fire(value)
+		end
+	end
+
+	function Queue:Pop() : any?
+		if self:IsEmpty() then
+			return nil
+		end
+
+		local first = self._first
+		local value = self._queue[first]
+		self._queue[first] = nil
+		self._first = first + 1
+
+		self.ElementRemoved:Fire(value)
+
+		return value
+	end
+
+	function Queue:Destroy()
+		self.ElementAdded:Destroy()
+		self.ElementRemoved:Destroy()
+
+		self = nil
+	end
+
+	return Queue.new()
 end
 
 
