@@ -68,7 +68,12 @@ end
 --// Private
 
 function Screen3D:GetPart2D(guiObject: GuiObject)
-    return self.Part2DComponents[guiObject]
+    return self.Part2DComponents[guiObject] :: {
+        SetOffset: (any, offset: CFrame) -> nil,
+        Enable: () -> nil,
+        Disable: () -> nil,
+        Destroy: () -> nil
+    }
 end
 
 return Screen3D

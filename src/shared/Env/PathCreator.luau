@@ -11,13 +11,6 @@ PathCreator.__index = PathCreator
 
 --// Helper functions
 
-local function _setJumpState(humanoid: Humanoid)
-    pcall(function()
-		if humanoid:GetState() ~= Enum.HumanoidStateType.Jumping and humanoid:GetState() ~= Enum.HumanoidStateType.Freefall then
-			humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-		end
-	end)
-end
 local function _invokeWaypointReached(self: table)
     local lastWaypoint = self.Waypoints[self.CurWaypoint - 1]
 	local nextWaypoint = self.Waypoints[self.CurWaypoint]
@@ -29,9 +22,6 @@ local function _disconnectMoveConns(self: table)
 	self.moveConn = nil
 end
 local function _moveNPC(self: table)
-    if self.Waypoints[self.CurWaypoint].Action == Enum.PathWaypointAction.Jump then
-		_setJumpState(self.Humanoid)
-	end
 	self.Humanoid:MoveTo(self.Waypoints[self.CurWaypoint].Position)
 end
 local function _moveToFinished(self: table, isReached: boolean)
@@ -62,8 +52,6 @@ local function _comparePosition(self: table)
 	self.Position.LastPos = self.NPC.PrimaryPart.Position
 
 	if self.Position.StuckCount >= self.Settings.ComparisonCheckTimes then
-		_setJumpState(self.Humanoid)
-
         self.Events.Errored:Fire("AgentStuck")
 	end
 end
@@ -95,16 +83,6 @@ function PathCreator.new(npc: Model, pfsArgs: table)
         }
 
     }, PathCreator)
-
-
-    self.PathObj.Blocked:Connect(function(blockedIndex: number)
-        if (self.CurWaypoint <= blockedIndex and self.CurWaypoint + 1 >= blockedIndex) and self.Humanoid then
-            _setJumpState(self.Humanoid)
-
-            self.Events.Blocked:Fire(self.NPC, self.Waypoints[blockedIndex])
-        end
-    end)
-
 
     return self
 end
@@ -173,6 +151,7 @@ function PathCreator:Stop()
 
 	self.Status = "Idle"
 	self.Events.Stopped:Fire(self.NPC)
+    self.Events.Reached:Fire()
 end
 
 

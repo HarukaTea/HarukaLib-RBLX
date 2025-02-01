@@ -162,6 +162,7 @@ function HarukaLib:RichTextify(text: string) : string
 		["<white>"] = [[<font color="#ffffff">]],
 		["<black>"] = [[<font color="#2d3436">]],
 		["<pink>"] = [[<font color="#ff9ff3">]],
+		["<gray>"] = [[<font color="#747d8c">]],
 	}
 
 	for oriTag: string, rbxColorTag: string in colorList do
@@ -888,7 +889,7 @@ end
 function HarukaLib:CopyTableExcept(t: table, except: { string }, shouldIncludeFunc: boolean?) : table
 	local newT = {}
 
-    for key, val in t do
+    for key: string, val: any in t do
 		if not shouldIncludeFunc then
 			if typeof(val) == "function" then continue end
 		end
@@ -898,6 +899,22 @@ function HarukaLib:CopyTableExcept(t: table, except: { string }, shouldIncludeFu
     end
 
     return newT
+end
+
+
+--[[
+	A helper function to filter a table, but it's whitelisted instead of blacklisted
+]]
+function HarukaLib:MakePackage(t: table, whiteList: { string }) : table
+	local newT = {}
+
+	for key: string, val: any in t do
+		if table.find(whiteList, key) then
+			newT[key] = val
+		end
+	end
+
+	return newT
 end
 
 
@@ -968,6 +985,116 @@ function HarukaLib.Queue()
 	end
 
 	return Queue.new()
+end
+
+
+--[[
+	A helper function to count dict length
+]]
+function HarukaLib:CountDictLength(dict: { [any]: any }) : number
+	local count = 0
+
+	for _, _ in dict do
+		count += 1
+	end
+
+	return count
+end
+
+
+--[[
+	A list of helper functions to manipulate table
+]]
+function HarukaLib.TableUtil()
+	local tableUtils = {}
+
+	tableUtils.Keys = function(tbl: table) : { string }
+		local keys = table.create(#tbl)
+
+		for key: string in tbl do
+			table.insert(keys, key)
+		end
+
+		return keys
+	end
+	tableUtils.Values = function(tbl: table) : { any }
+		local values = table.create(#tbl)
+
+		for _, value in tbl do
+			table.insert(values, value)
+		end
+
+		return values
+	end
+	tableUtils.IsEmpty = function(tbl: table) : boolean
+		return next(tbl) == nil
+	end
+	tableUtils.Filter = function(tbl: table, predicate: (val: any, key: any, tbl: { table }) -> boolean) : table
+		local newT = table.create(#tbl)
+
+		if #tbl > 0 then
+			local n = 0
+			for i, v in tbl do
+				if predicate(v, i, tbl) then
+					n += 1
+					newT[n] = v
+				end
+			end
+		else
+			for k, v in tbl do
+				if predicate(v, k, tbl) then
+					newT[k] = v
+				end
+			end
+		end
+
+		return newT
+	end
+	tableUtils.Cut = function(tbl: table, len: number) : table
+		local n = #tbl
+		len = math.clamp(len, 1, n)
+
+		return if len == n then table.clone(tbl) else table.remove(tbl, 1, len, 1, table.create(len))
+	end
+	tableUtils.CheckForSome = function(tbl: table, callback: (val: any, key: any, tbl: { table }) -> boolean) : boolean
+		for k, v in tbl do
+			if callback(v, k, tbl) then
+				return true
+			end
+		end
+
+		return false
+	end
+	tableUtils.CheckForEvery = function(tbl: table, callback: (val: any, key: any, tbl: { table }) -> boolean) : boolean
+		for k, v in tbl do
+			if not callback(v, k, tbl) then
+				return false
+			end
+		end
+
+		return true
+	end
+	tableUtils.Find = function(tbl: table, callback: (val: any, key: any, tbl: { table }) -> boolean) : (Value?, Key?)
+		for k, v in tbl do
+			if callback(v, k, tbl) then
+				return v, k
+			end
+		end
+
+		return nil, nil
+	end
+	tableUtils.Map = function(tbl: table, callback: (val: any, key: any, tbl: { table }) -> any) : table
+		local newT = table.create(#tbl)
+
+		for k, v in tbl do
+			newT[k] = callback(v, k, tbl)
+		end
+
+		return newT
+	end
+
+
+	return tableUtils
 end
 
 
