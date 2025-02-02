@@ -12,7 +12,6 @@ local Replica = nil
 local replicaToken = nil
 
 local replicaObj_Client = {}
-local replicaConn_Server = nil
 local replicaConn_Client = nil
 
 local globalCharAttrsObjPool = {}
@@ -43,8 +42,11 @@ function GlobalCharAttrsLib.new(uniqueId: string, props: {
 
     self.UniqueId = uniqueId
 
-    self.AttrsObj = props.AttrsObjForClient
-    self.EditAttrsSignal = props.EditAttrsSignalForServer
+    if RunService:IsServer() then
+        self.AttrsObj = props.AttrsObjForClient
+        self.EditAttrsSignal = props.EditAttrsSignalForServer
+    end
+
 
     self.Trackers = {}
     self.SubscribeFusionVals = {}
@@ -67,24 +69,23 @@ function GlobalCharAttrsLib:Init()
     self.ReplicaToken = replicaToken
 
     if RunService:IsServer() then
-        if replicaConn_Server == nil then
-            replicaConn_Server = Replica.New({
-                Token = self.ReplicaToken,
-                Tags = {
-                    UniqueId = self.UniqueId
-                },
-                Data = {
-                    [tostring(self.UniqueId)] = self.AttrsObj
-                }
-            })
-        end
-
-        self.ReplicaObj = replicaConn_Server
+        self.ReplicaObj = self.Replica.New({
+            Token = self.ReplicaToken,
+            Tags = {
+                UniqueId = self.UniqueId
+            },
+            Data = {
+                [tostring(self.UniqueId)] = self.AttrsObj
+            }
+        })
         self.ReplicaObj:Replicate()
+
+        self.Add(self.ReplicaObj)
     else
         if replicaConn_Client == nil then
-            replicaConn_Client = Replica.OnNew("GlobalCharAttrs", function(replica)
-                replicaObj_Client[tostring(replica.Tags.UniqueId)] = replica
+            replicaConn_Client = self.Replica.OnNew("GlobalCharAttrs", function(replica)
+                replicaObj_Client[tostring(replica.Tags.UniqueId)] = self.new(replica.Tags.UniqueId)
+                replicaObj_Client[tostring(replica.Tags.UniqueId)].ReplicaObj = replica
 
                 if replica.Tags.UniqueId == self.UniqueId then
                     self.ReplicaObj = replica
@@ -97,10 +98,6 @@ function GlobalCharAttrsLib:Init()
 end
 
 
-function GlobalCharAttrsLib:GetAttrsObjByUniqueId(uniqueId: string) : table?
-    return globalCharAttrsObjPool[uniqueId]
-end
-
 
 function GlobalCharAttrsLib:Destroy()
     self.Empty()
@@ -109,8 +106,7 @@ function GlobalCharAttrsLib:Destroy()
         replicaConn_Client:Destroy()
         replicaConn_Client = nil
     else
-        replicaConn_Server:Destroy()
-        replicaConn_Server = nil
+
     end
 
     globalCharAttrsObjPool[self.UniqueId] = nil
@@ -120,17 +116,20 @@ end
 
 
 
+function GlobalCharAttrsLib:GetCharAttrsObjByUniqueId_Server(uniqueId: string) : table?
+    return globalCharAttrsObjPool[uniqueId]
+end
 
-function GlobalCharAttrsLib:GetAllAttrs() : table
+function GlobalCharAttrsLib:GetCharAttrsObjByUniqueId_Client(uniqueId: string) : table?
+    return replicaObj_Client[uniqueId]
+end
+
+function GlobalCharAttrsLib:GetGlobalCharAttrsObjPool_Server() : table
+    return globalCharAttrsObjPool
+end
+
+function GlobalCharAttrsLib:GetAllCharAttrsObjs_Client() : table
     return replicaObj_Client
-end
-
-function GlobalCharAttrsLib:GetAttrsByUniqueId(uniqueId: string) : table?
-    return replicaObj_Client[uniqueId].Data[uniqueId]
-end
-
-function GlobalCharAttrsLib:GetLocalAttrs() : table?
-    return self:GetAttrsByUniqueId(self.UniqueId)
 end
 
 
@@ -151,6 +150,7 @@ function GlobalCharAttrsLib:Subscribe(uniqueId: string, attr: string, tracker: (
         local conn = self.ReplicaObj:OnSet({ uniqueId, attr }, function(new: any)
             stateVal:set(new)
         end)
+        stateVal:set(self.ReplicaObj.Data[uniqueId][attr])
 
         self.Add(function()
             conn:Destroy()
@@ -160,15 +160,15 @@ function GlobalCharAttrsLib:Subscribe(uniqueId: string, attr: string, tracker: (
             local thatCharUniqueId = route[1]
             local changingAttr = route[2]
 
-            if not self.SubscribeFusionVals[thatCharUniqueId] then return end
-            if not self.SubscribeFusionVals[thatCharUniqueId][changingAttr] then return end
+            if thatCharUniqueId ~= uniqueId then return end
+            if changingAttr ~= attr then return end
 
-            self.SubscribeFusionVals[thatCharUniqueId][changingAttr]:set(val)
+            stateVal:set(val)
         end))
     end
 
     local observer = Fusion.Observer(self.scope, stateVal)
-    local disconnectFunc = observer:onChange(function()
+    local disconnectFunc = observer:onBind(function()
         for _, func in self.Trackers[uniqueId][attr] do
             func(Fusion.peek(stateVal))
         end

@@ -13,7 +13,6 @@ local Replica = nil
 local replicaToken = nil
 
 local replicaObj_Client = {}
-local replicaConn_Server = nil
 local replicaConn_Client = nil
 
 local globalPlayerAttrsObjPool = {}
@@ -72,25 +71,23 @@ function GlobalPlayerAttrsLib:Init()
     self.ReplicaToken = replicaToken
 
     if RunService:IsServer() then
-        if replicaConn_Server == nil then
-            replicaConn_Server = Replica.New({
-                Token = self.ReplicaToken,
-                Tags = {
-                    UserId = self.PlayerUserId
-                },
-                Data = {
-                    [tostring(self.PlayerUserId)] = self.AttrsObj
-                }
-            })
+        self.ReplicaObj = self.Replica.New({
+            Token = self.ReplicaToken,
+            Tags = {
+                UserId = self.PlayerUserId
+            },
+            Data = {
+                [tostring(self.PlayerUserId)] = self.AttrsObj
+            }
+        })
+        self.ReplicaObj:Replicate()
 
-            replicaConn_Server:Replicate()
-        end
-
-        self.ReplicaObj = replicaConn_Server
+        self.Add(self.ReplicaObj)
     else
         if replicaConn_Client == nil then
-            replicaConn_Client = Replica.OnNew("GlobalPlayerAttrs", function(replica)
-                replicaObj_Client[tostring(replica.Tags.UserId)] = replica
+            replicaConn_Client = self.Replica.OnNew("GlobalPlayerAttrs", function(replica)
+                replicaObj_Client[tostring(replica.Tags.UserId)] = self.new(replica.Tags.UserId)
+                replicaObj_Client[tostring(replica.Tags.UserId)].ReplicaObj = replica
 
                 if replica.Tags.UserId == self.PlayerUserId then
                     self.ReplicaObj = replica
@@ -103,12 +100,6 @@ function GlobalPlayerAttrsLib:Init()
 end
 
 
-
-function GlobalPlayerAttrsLib:GetAttrsObjByUserId(userId: number) : table?
-    return globalPlayerAttrsObjPool[tostring(userId)]
-end
-
-
 function GlobalPlayerAttrsLib:Destroy()
     self.Empty()
 
@@ -116,8 +107,7 @@ function GlobalPlayerAttrsLib:Destroy()
         replicaConn_Client:Destroy()
         replicaConn_Client = nil
     else
-        replicaConn_Server:Destroy()
-        replicaConn_Server = nil
+
     end
 
     globalPlayerAttrsObjPool[tostring(self.PlayerUserId)] = nil
@@ -126,20 +116,28 @@ function GlobalPlayerAttrsLib:Destroy()
 end
 
 
+function GlobalPlayerAttrsLib:GetPlayerAttrsObjByUserId_Server(userId: number) : table?
+    return globalPlayerAttrsObjPool[tostring(userId)]
+end
 
+function GlobalPlayerAttrsLib:GetPlayerAttrsObjByPlayer_Server(player: Player) : table?
+    return self:GetPlayerAttrsObjByUserId_Server(player.UserId)
+end
 
-function GlobalPlayerAttrsLib:GetAllAttrs() : table
+function GlobalPlayerAttrsLib:GetPlayerAttrsObjByUserId_Client(userId: number) : table?
+    return replicaObj_Client[tostring(userId)]
+end
+
+function GlobalPlayerAttrsLib:GetPlayerAttrsObjByPlayer_Client(player: Player) : table?
+    return self:GetPlayerAttrsObjByUserId_Client(player.UserId)
+end
+
+function GlobalPlayerAttrsLib:GetPlayerAttrsObjPool_Server() : table
+    return globalPlayerAttrsObjPool
+end
+
+function GlobalPlayerAttrsLib:GetAllPlayerAttrsObjs_Client() : table
     return replicaObj_Client
-end
-
-function GlobalPlayerAttrsLib:GetAttrsByPlayer(player: Player) : table?
-    local userId = tostring(player.UserId)
-
-    return replicaObj_Client[userId].Data[userId]
-end
-
-function GlobalPlayerAttrsLib:GetLocalAttrs() : table?
-    return self:GetAttrsByPlayer(Players.LocalPlayer)
 end
 
 
@@ -161,24 +159,26 @@ function GlobalPlayerAttrsLib:Subscribe(player: Player, attr: string, tracker: (
         local conn = self.ReplicaObj:OnSet({ tostring(player.UserId), attr }, function(new: any)
             stateVal:set(new)
         end)
+        stateVal:set(self.ReplicaObj.Data[playerUserId][attr])
+
 
         self.Add(function()
-            conn:Disconnect()
+            conn:Destroy()
         end)
     else
         self.Add(self.EditAttrsSignal:Connect(function(route: { string }, val: any)
             local thatPlrUserId = route[1]
             local changingAttr = route[2]
 
-            if not self.SubscribeFusionVals[thatPlrUserId] then return end
-            if not self.SubscribeFusionVals[thatPlrUserId][changingAttr] then return end
+            if thatPlrUserId ~= playerUserId then return end
+            if changingAttr ~= attr then return end
 
-            self.SubscribeFusionVals[thatPlrUserId][changingAttr]:set(val)
+            stateVal:set(val)
         end))
     end
 
     local observer = Fusion.Observer(self.scope, stateVal)
-    local disconnectFunc = observer:onChange(function()
+    local disconnectFunc = observer:onBind(function()
         for _, func in self.Trackers[playerUserId][attr] do
             func(Fusion.peek(stateVal))
         end

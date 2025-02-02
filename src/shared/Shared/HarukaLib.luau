@@ -1054,7 +1054,7 @@ function HarukaLib.TableUtil()
 		local n = #tbl
 		len = math.clamp(len, 1, n)
 
-		return if len == n then table.clone(tbl) else table.remove(tbl, 1, len, 1, table.create(len))
+		return if len == n then table.clone(tbl) else table.move(tbl, 1, len, 1, table.create(len))
 	end
 	tableUtils.CheckForSome = function(tbl: table, callback: (val: any, key: any, tbl: { table }) -> boolean) : boolean
 		for k, v in tbl do

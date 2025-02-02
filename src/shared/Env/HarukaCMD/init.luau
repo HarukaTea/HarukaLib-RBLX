@@ -45,7 +45,7 @@ HarukaCMD.__index = HarukaCMD
 --// Helper functions
 
 --// Constructor
-function HarukaCMD.new()
+function HarukaCMD.new(groupId: number)
     local self = setmetatable({}, HarukaCMD)
 
     if RunService:IsClient() then
@@ -63,10 +63,17 @@ function HarukaCMD.new()
         self.Rank = 0
 
         self.AutoCompletePointer = Value(1)
+        self.ItemAutoCompletePointer = Value(1)
+
+        self.ExtraArgs = {}
+        for _ = 1, 7 do
+            table.insert(self.ExtraArgs, Value(""))
+        end
     else
 
     end
 
+    self.GroupId = groupId
     self.Commands = {}
 
     self.Add, self.Empty = HarukaLib.Bin()
@@ -81,7 +88,7 @@ function HarukaCMD:Init()
         self.Rank = false
 
         Promise.new(function()
-            self.Rank = Players.LocalPlayer:GetRankInGroup(16912246)
+            self.Rank = Players.LocalPlayer:GetRankInGroup(self.GroupId)
         end):catch(function()
             self.Rank = 0
         end)
@@ -112,7 +119,7 @@ function HarukaCMD:Init()
             local suggestedCommand = suggestedCommands[nextPointer] :: table
 
             local text = ""
-            text ..= string.upper(suggestedCommand.Alias)
+            text ..= suggestedCommand.Alias
             text ..= " "
             for _, _ in suggestedCommand.Args do
                 text ..= "<>"
@@ -121,7 +128,26 @@ function HarukaCMD:Init()
 
             wait()
             self.CMDInput:set(text)
-            self.UI.Full.Input.CMD.CursorPosition = #text
+        end
+        self.ArgAutoCompleteFunc = function(argProps: {
+            Option: string,
+            Index: number
+        })
+            local text = Fusion.peek(self.CMDInput) :: string
+            local count = 0
+
+            local result = string.gsub(text, "<([^>]*)>", function(content)
+                count += 1
+
+                if count == argProps.Index then
+                    return "<"..argProps.Option..">"
+                else
+                    return "<"..content..">"
+                end
+            end)
+
+            wait()
+            self.CMDInput:set(result)
         end
     else
         self:_InitRequestListenTracker()
@@ -164,6 +190,8 @@ function HarukaCMD:_InitUI()
         Intellisense = self.CMDIntellisense,
         IntellisensePointer = self.AutoCompletePointer,
         ItemIntellisense = self.ItemIntellisense,
+        ItemIntellisensePointer = self.ItemAutoCompletePointer,
+        ExtraArgs = self.ExtraArgs,
 
         AutoCompleteFunc = self.AutoCompleteFunc,
     }, self)
@@ -183,10 +211,19 @@ function HarukaCMD:_ListenInputTracker()
     end
     local function _handlePointer(nextPointer: number)
         local totalElements = #Fusion.peek(self.CMDIntellisense) :: number
+        if totalElements <= 0 then totalElements = 1 end
 
         nextPointer = math.clamp(nextPointer, 1, totalElements)
 
         self.AutoCompletePointer:set(nextPointer)
+    end
+    local function _handleItemPointer(nextPointer: number)
+        local totalElements = #Fusion.peek(self.ItemIntellisense) :: number
+        if totalElements <= 0 then totalElements = 1 end
+
+        nextPointer = math.clamp(nextPointer, 1, totalElements)
+
+        self.ItemAutoCompletePointer:set(nextPointer)
     end
     self.Add(UserInputService.InputBegan:Connect(function(input, gpe)
         if input.KeyCode == Enum.KeyCode.Quote then
@@ -205,6 +242,12 @@ function HarukaCMD:_ListenInputTracker()
         elseif input.KeyCode == Enum.KeyCode.Up then
             _handlePointer(Fusion.peek(self.AutoCompletePointer) - 1)
 
+        elseif input.KeyCode == Enum.KeyCode.Right then
+            _handleItemPointer(Fusion.peek(self.ItemAutoCompletePointer) + 1)
+
+        elseif input.KeyCode == Enum.KeyCode.Left then
+            _handleItemPointer(Fusion.peek(self.ItemAutoCompletePointer) - 1)
+
         elseif input.KeyCode == Enum.KeyCode.Tab then
             self.AutoCompleteFunc()
         end
@@ -214,7 +257,7 @@ function HarukaCMD:_ListenInputTracker()
     panelCommand.Name = "HarukaCMDCommand"
     panelCommand.Parent = TextChatService:WaitForChild("TextChatCommands")
     panelCommand.PrimaryAlias = "/cmds"
-    panelCommand.SecondaryAlias = "/debug"
+    panelCommand.SecondaryAlias = "!cmds"
     panelCommand.AutocompleteVisible = true
     panelCommand.Enabled = true
 
@@ -225,6 +268,7 @@ function HarukaCMD:_ListenInputTracker()
     end)
 
     self.Add(panelCommand)
+    self.Add(GuiService.MenuOpened:Connect(_handleOpen))
 end
 
 
@@ -232,16 +276,15 @@ function HarukaCMD:_ListenUITracker()
     local cmdOpenObserver = Fusion.Observer(self.scope, self.IsShown)
     cmdOpenObserver:onBind(function()
         if Fusion.peek(self.IsShown) then
-            self.UI.Full.Input.CMD:CaptureFocus()
-
-            wait()
-            self.CMDInput:set("")
+            self.CMDInput:set("/")
 
             if GuiService.MenuIsOpen then
                 self.IsShown:set(false) --- special case for roblox menu bugs (rarely)
             end
-        else
-            self.UI.Full.Input.CMD:ReleaseFocus()
+
+            for _, argVal: Fusion.Value in self.ExtraArgs do
+                argVal:set("")
+            end
         end
     end)
 
@@ -249,20 +292,22 @@ function HarukaCMD:_ListenUITracker()
     local cmdInputObserver = Fusion.Observer(self.scope, self.CMDInput)
     cmdInputObserver:onBind(function()
         local input = Fusion.peek(self.CMDInput) :: string
-        local realInput = string.upper(input)
+        local realInput = string.gsub(input, " ", "")
 
         local acceptedCmds = {}
-        for _, cmd: table in self.Commands do
-            local inputLen, aliasLen = #realInput, #cmd.Alias
-            local inputCMD, aliasCMD = realInput, string.upper(cmd.Alias)
+        pcall(function()
+            for _, cmd: table in self.Commands do
+                local inputLen, aliasLen = #realInput, #cmd.Alias
+                local inputCMD, aliasCMD = realInput, cmd.Alias
 
-            if inputLen > aliasLen then
-                inputCMD, aliasCMD = aliasCMD, inputCMD
+                if inputLen > aliasLen then
+                    inputCMD, aliasCMD = aliasCMD, inputCMD
+                end
+                if string.find(aliasCMD, inputCMD) then
+                    table.insert(acceptedCmds, cmd)
+                end
             end
-            if string.find(aliasCMD, inputCMD) then
-                table.insert(acceptedCmds, cmd)
-            end
-        end
+        end)
 
         self.CMDIntellisense:set(acceptedCmds)
 
@@ -279,13 +324,47 @@ function HarukaCMD:_ListenUITracker()
     pointerObserver:onBind(function()
         local pointer = Fusion.peek(self.AutoCompletePointer) :: number
         local suggestedCommands = Fusion.peek(self.CMDIntellisense) :: table
-        if pointer <= 0 or #suggestedCommands <= 0 then
+        if #suggestedCommands <= 0 then
             self.ItemIntellisense:set({})
             return
         end
 
+        pointer = math.clamp(pointer, 1, #suggestedCommands)
+
         local curSuggested = suggestedCommands[pointer] :: table
         self.ItemIntellisense:set(curSuggested.Args)
+
+        for _, argVal: Fusion.Value in self.ExtraArgs do
+            argVal:set("")
+        end
+    end)
+
+
+    local cmdIntellisenseObserver = Fusion.Observer(self.scope, self.CMDIntellisense)
+    cmdIntellisenseObserver:onBind(function()
+        local suggestedCommands = Fusion.peek(self.CMDIntellisense) :: table
+        if #suggestedCommands <= 0 then
+            self.ItemIntellisense:set({})
+            return
+        end
+
+        local pointer = Fusion.peek(self.AutoCompletePointer) :: number
+
+        pointer = math.clamp(pointer, 1, #suggestedCommands)
+        self.AutoCompletePointer:set(pointer)
+
+        local curSuggested = suggestedCommands[pointer] :: table
+        self.ItemIntellisense:set(curSuggested.Args)
+
+        for _, argVal: Fusion.Value in self.ExtraArgs do
+            argVal:set("")
+        end
+    end)
+
+
+    local itemIntellisenseObserver = Fusion.Observer(self.scope, self.ItemIntellisense)
+    itemIntellisenseObserver:onBind(function()
+        self.ItemAutoCompletePointer:set(1)
     end)
 end
 
@@ -294,7 +373,7 @@ end
 --// Server Private Methods
 
 function HarukaCMD:_InitRequestListenTracker()
-    Events.RequestCommands.SetCallback(function()
+    Events.RequestCommands.SetCallback(function(plr: Player)
         local transformedCommands = {}
 
         for _, cmd in self.Commands do
@@ -310,22 +389,19 @@ end
 
 function HarukaCMD:_InitCommandExecutionTracker()
     Events.ExecuteCommand.SetCallback(function(plr: Player, data)
-        local cmd = string.lower(data.Command)
-        local cmdWithoutSpace = string.gsub(cmd, " ", "")
-
-        local cmdId = string.match(cmdWithoutSpace, "([^<]+)")
+        local command = data.Command
+        local cmdId = string.match(command, "^(/%S+)")
         if cmdId == "" or cmdId == nil then return end
 
         local cmdArgs = {}
-        local cmdArgsStr = string.gmatch(cmdWithoutSpace, "<([^>]+)>")
-
+        local cmdArgsStr = string.gmatch(command, "<([^>]+)>")
         for arg in cmdArgsStr or {} do
             table.insert(cmdArgs, arg)
         end
 
         local realCmd = nil
         for _, cmdProp in self.Commands do
-            if cmdProp.Alias == string.lower(cmdId) then
+            if cmdProp.Alias == cmdId then
                 realCmd = cmdProp
                 break
             end
@@ -341,18 +417,97 @@ function HarukaCMD:_InitCommandExecutionTracker()
         end
 
 
+        --// return true args
+        local check, validatedArgs = self:_ValidateCmd(realCmd, cmdArgs)
+        if not check then
+            GameEvents.CreateNotify.Fire(plr, "Invalid arguments for command!")
+            return
+        end
+
+
         Promise.new(function(resolve)
             realCmd.Callback({
                 Executor = plr,
                 ExecutorObj = playerObj,
-                Args = cmdArgs,
+                Args = validatedArgs,
 
                 ResolveObj = resolve
             })
         end):catch(function(err)
             warn(tostring(err))
+
+            GameEvents.CreateNotify.Fire(plr, "An error occurred while executing the command!")
         end)
     end)
+end
+
+
+function HarukaCMD:_ValidateCmd(realCMD: table, cmdArgs: { string }) : (boolean, table)
+    local realCMDArgs = table.clone(cmdArgs)
+
+    local args = realCMD.Args :: table
+    local check = true
+    for index: number, arg: string in realCMDArgs do
+        if not args[index] then
+            check = false
+            break
+        end
+
+        local argType = args[index].Type
+        if argType == "number" then
+            if not tonumber(arg) then
+                check = false
+                break
+            end
+
+            realCMDArgs[index] = tonumber(arg)
+
+        elseif argType == "player" then
+            local hasPlayer = false
+            for _, thatPlayerObj: table in PlayerLib:GetPlayerPool() do
+                if string.lower(thatPlayerObj.Player.Name) == string.lower(arg) then
+                    realCMDArgs[index] = thatPlayerObj.Player
+                    hasPlayer = true
+                    break
+                end
+            end
+
+            if not hasPlayer then
+                check = false
+                break
+            end
+
+        elseif argType == "players" then
+            local hasPlayer = false
+
+            if arg ~= "All" then
+                for _, thatPlayerObj: table in PlayerLib:GetPlayerPool() do
+                    if string.lower(thatPlayerObj.Player.Name) == string.lower(arg) then
+                        realCMDArgs[index] = { thatPlayerObj.Player }
+                        hasPlayer = true
+                        break
+                    end
+                end
+
+                if not hasPlayer then
+                    check = false
+                    break
+                end
+            else
+                local totalPlayers = {}
+                for _, thatPlayerObj: table in PlayerLib:GetPlayerPool() do
+                    table.insert(totalPlayers, thatPlayerObj.Player)
+                end
+
+                realCMDArgs[index] = totalPlayers
+            end
+        end
+    end
+    if not check then
+        return false, {}
+    end
+
+    return true, realCMDArgs
 end
 
 
