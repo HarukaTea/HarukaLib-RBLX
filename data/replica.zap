@@ -20,7 +20,17 @@ event CreateData = {
     from: Server,
     type: Reliable,
     call: ManyAsync,
-    data: (creation: unknown, root_id: u16?)
+    data: (creation: map {
+        [string]: unknown[]
+    })
+}
+event RequestCreations = {
+    from: Server,
+    type: Reliable,
+    call: ManyAsync,
+    data: (creation: map {
+        [string]: unknown[]
+    }[])
 }
 event DestroyData = {
     from: Server,

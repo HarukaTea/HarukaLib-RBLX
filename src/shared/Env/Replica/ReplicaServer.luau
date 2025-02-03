@@ -7,6 +7,8 @@ local RepS = game:GetService("ReplicatedStorage")
 local Signal = require(RepS.HarukaShared.Shared.Signal)
 local Events = require(script.Parent.ReplicaServerEvents)
 
+local isSimilar = require(RepS.HarukaShared.Shared.Fusion.Utility.isSimilar)
+
 ----- Private -----
 
 local REPLICATION_ALL = "ALL"
@@ -107,8 +109,14 @@ function Replica:Set(path: {string}, value: any)
 	for i = 1, #path - 1 do
 		pointer = pointer[path[i]]
 	end
+
+	local old = pointer[path[#path]] :: any
+	local new = value
+	local isTheSame = isSimilar(old, new)
+
 	pointer[path[#path]] = value
 
+	if isTheSame then return end
 
 	-- Replicate change:
 	local self_id = self.Id
@@ -133,6 +141,7 @@ function Replica:Replicate()
 
 	local creation = self.creation
 	local replication = self.replication
+
 
 	for player in pairs(ReadyPlayers) do
 		if replication[player] == nil then
@@ -224,7 +233,7 @@ Events.RequestData.SetCallback(function(player: Player)
 	for replica in pairs(ReplicationAllReplicas) do
 		table.insert(creation, replica.creation)
 	end
-	Events.CreateData.Fire(player, creation)
+	Events.RequestCreations.Fire(player, creation)
 
 	-- Set player to active:
 	ReadyPlayers[player] = true

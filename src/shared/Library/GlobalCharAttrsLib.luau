@@ -47,10 +47,6 @@ function GlobalCharAttrsLib.new(uniqueId: string, props: {
         self.EditAttrsSignal = props.EditAttrsSignalForServer
     end
 
-
-    self.Trackers = {}
-    self.SubscribeFusionVals = {}
-
     self.scope = Fusion.scoped(Fusion)
 
     self.Add, self.Empty = HarukaLib.Bin()
@@ -137,20 +133,13 @@ end
 function GlobalCharAttrsLib:Subscribe(uniqueId: string, attr: string, tracker: (T...) -> nil)
     local stateVal = Fusion.Value(self.scope, nil)
 
-    if not self.SubscribeFusionVals[uniqueId] then self.SubscribeFusionVals[uniqueId] = {} end
-    self.SubscribeFusionVals[uniqueId][attr] = stateVal
-
-    if not self.Trackers[uniqueId] then self.Trackers[uniqueId] = {} end
-    if not self.Trackers[uniqueId][attr] then self.Trackers[uniqueId][attr] = {} end
-
-    table.insert(self.Trackers[uniqueId][attr], tracker)
-
 
     if RunService:IsClient() then
         local conn = self.ReplicaObj:OnSet({ uniqueId, attr }, function(new: any)
             stateVal:set(new)
         end)
         stateVal:set(self.ReplicaObj.Data[uniqueId][attr])
+
 
         self.Add(function()
             conn:Destroy()
@@ -169,9 +158,7 @@ function GlobalCharAttrsLib:Subscribe(uniqueId: string, attr: string, tracker: (
 
     local observer = Fusion.Observer(self.scope, stateVal)
     local disconnectFunc = observer:onBind(function()
-        for _, func in self.Trackers[uniqueId][attr] do
-            func(Fusion.peek(stateVal))
-        end
+        tracker(Fusion.peek(stateVal))
     end)
 
     return disconnectFunc

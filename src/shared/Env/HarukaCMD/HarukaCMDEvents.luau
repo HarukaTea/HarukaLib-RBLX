@@ -160,18 +160,33 @@ reliable.OnClientEvent:Connect(function(buff, inst)
 			for i_1 = 1, len_1 do
 				local val_1
 				val_1 = {}
-				for _ = 1, buffer.readu16(incoming_buff, read(2)) do
-					local key_1
+				local len_2 = buffer.readu16(incoming_buff, read(2))
+				val_1.Name = buffer.readstring(incoming_buff, read(len_2), len_2)
+				local len_3 = buffer.readu16(incoming_buff, read(2))
+				val_1.Alias = buffer.readstring(incoming_buff, read(len_3), len_3)
+				val_1.RankReq = buffer.readu8(incoming_buff, read(1))
+				val_1.Args = {}
+				local len_4 = buffer.readu16(incoming_buff, read(2))
+				for i_2 = 1, len_4 do
 					local val_2
-					local len_2 = buffer.readu16(incoming_buff, read(2))
-					key_1 = buffer.readstring(incoming_buff, read(len_2), len_2)
+					val_2 = {}
+					local len_5 = buffer.readu16(incoming_buff, read(2))
+					val_2.Name = buffer.readstring(incoming_buff, read(len_5), len_5)
+					local len_6 = buffer.readu16(incoming_buff, read(2))
+					val_2.Type = buffer.readstring(incoming_buff, read(len_6), len_6)
 					if buffer.readu8(incoming_buff, read(1)) == 1 then
-						incoming_ipos = incoming_ipos + 1
-						val_2 = incoming_inst[incoming_ipos]
+						val_2.EnumItems = {}
+						local len_7 = buffer.readu16(incoming_buff, read(2))
+						for i_3 = 1, len_7 do
+							local val_3
+							local len_8 = buffer.readu16(incoming_buff, read(2))
+							val_3 = buffer.readstring(incoming_buff, read(len_8), len_8)
+							val_2.EnumItems[i_3] = val_3
+						end
 					else
-						val_2 = nil
+						val_2.EnumItems = nil
 					end
-					val_1[key_1] = val_2
+					val_1.Args[i_2] = val_2
 				end
 				value.Commands[i_1] = val_1
 			end
@@ -194,16 +209,25 @@ local returns = {
 		}))
 			alloc(1)
 			buffer.writeu8(outgoing_buff, outgoing_apos, 0)
-			local len_3 = #Value.Command
+			local len_9 = #Value.Command
 			alloc(2)
-			buffer.writeu16(outgoing_buff, outgoing_apos, len_3)
-			alloc(len_3)
-			buffer.writestring(outgoing_buff, outgoing_apos, Value.Command, len_3)
+			buffer.writeu16(outgoing_buff, outgoing_apos, len_9)
+			alloc(len_9)
+			buffer.writestring(outgoing_buff, outgoing_apos, Value.Command, len_9)
 		end,
 	},
 	RequestCommands = {
 		Call = function(): (({
-			Commands: ({ ({ [(string)]: ((unknown)) }) }),
+			Commands: ({ ({
+				Name: (string),
+				Alias: (string),
+				RankReq: (number),
+				Args: ({ ({
+					Name: (string),
+					Type: (string),
+					EnumItems: (({ (string) })?),
+				}) }),
+			}) }),
 		}))
 			alloc(1)
 			buffer.writeu8(outgoing_buff, outgoing_apos, 1)

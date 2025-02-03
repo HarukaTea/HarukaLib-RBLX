@@ -199,25 +199,52 @@ reliable.OnServerEvent:Connect(function(player, buff, inst)
 					buffer.writeu16(outgoing_buff, outgoing_apos, len_2)
 					for i_1 = 1, len_2 do
 						local val_1 = ret_1.Commands[i_1]
-						local len_pos_1 = alloc(2)
-						local len_3 = 0
-						for k_1, v_1 in val_1 do
-							len_3 = len_3 + 1
-							local len_4 = #k_1
+						local len_3 = #val_1.Name
+						alloc(2)
+						buffer.writeu16(outgoing_buff, outgoing_apos, len_3)
+						alloc(len_3)
+						buffer.writestring(outgoing_buff, outgoing_apos, val_1.Name, len_3)
+						local len_4 = #val_1.Alias
+						alloc(2)
+						buffer.writeu16(outgoing_buff, outgoing_apos, len_4)
+						alloc(len_4)
+						buffer.writestring(outgoing_buff, outgoing_apos, val_1.Alias, len_4)
+						alloc(1)
+						buffer.writeu8(outgoing_buff, outgoing_apos, val_1.RankReq)
+						local len_5 = #val_1.Args
+						alloc(2)
+						buffer.writeu16(outgoing_buff, outgoing_apos, len_5)
+						for i_2 = 1, len_5 do
+							local val_2 = val_1.Args[i_2]
+							local len_6 = #val_2.Name
 							alloc(2)
-							buffer.writeu16(outgoing_buff, outgoing_apos, len_4)
-							alloc(len_4)
-							buffer.writestring(outgoing_buff, outgoing_apos, k_1, len_4)
-							if v_1 == nil then
+							buffer.writeu16(outgoing_buff, outgoing_apos, len_6)
+							alloc(len_6)
+							buffer.writestring(outgoing_buff, outgoing_apos, val_2.Name, len_6)
+							local len_7 = #val_2.Type
+							alloc(2)
+							buffer.writeu16(outgoing_buff, outgoing_apos, len_7)
+							alloc(len_7)
+							buffer.writestring(outgoing_buff, outgoing_apos, val_2.Type, len_7)
+							if val_2.EnumItems == nil then
 								alloc(1)
 								buffer.writeu8(outgoing_buff, outgoing_apos, 0)
 							else
 								alloc(1)
 								buffer.writeu8(outgoing_buff, outgoing_apos, 1)
-								table.insert(outgoing_inst, v_1)
+								local len_8 = #val_2.EnumItems
+								alloc(2)
+								buffer.writeu16(outgoing_buff, outgoing_apos, len_8)
+								for i_3 = 1, len_8 do
+									local val_3 = val_2.EnumItems[i_3]
+									local len_9 = #val_3
+									alloc(2)
+									buffer.writeu16(outgoing_buff, outgoing_apos, len_9)
+									alloc(len_9)
+									buffer.writestring(outgoing_buff, outgoing_apos, val_3, len_9)
+								end
 							end
 						end
-						buffer.writeu16(outgoing_buff, len_pos_1, len_3)
 					end
 					player_map[player_2] = save()
 				end, player, call_id, value)
@@ -241,7 +268,16 @@ local returns = {
 	},
 	RequestCommands = {
 		SetCallback = function(Callback: (Player: Player) -> (({
-			Commands: ({ ({ [(string)]: ((unknown)) }) }),
+			Commands: ({ ({
+				Name: (string),
+				Alias: (string),
+				RankReq: (number),
+				Args: ({ ({
+					Name: (string),
+					Type: (string),
+					EnumItems: (({ (string) })?),
+				}) }),
+			}) }),
 		}))): () -> ()
 			reliable_events[1] = Callback
 			return function()

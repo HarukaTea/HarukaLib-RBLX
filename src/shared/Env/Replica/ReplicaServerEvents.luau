@@ -120,6 +120,13 @@ if not RunService:IsRunning() then
 			FireList = noop,
 			FireSet = noop
 		}),
+		RequestCreations = table.freeze({
+			Fire = noop,
+			FireAll = noop,
+			FireExcept = noop,
+			FireList = noop,
+			FireSet = noop
+		}),
 		DestroyData = table.freeze({
 			Fire = noop,
 			FireAll = noop,
@@ -201,7 +208,7 @@ reliable.OnServerEvent:Connect(function(player, buff, inst)
 					local ret_1 = reliable_events[0](player_2, value_1)
 					load_player(player_2)
 					alloc(1)
-					buffer.writeu8(outgoing_buff, outgoing_apos, 3)
+					buffer.writeu8(outgoing_buff, outgoing_apos, 4)
 					alloc(1)
 					buffer.writeu8(outgoing_buff, outgoing_apos, call_id_2)
 					if ret_1 == "Success" then
@@ -391,49 +398,264 @@ local returns = {
 		end,
 	},
 	CreateData = {
-		Fire = function(Player: Player, creation: ((unknown)), root_id: ((number)?))
+		Fire = function(Player: Player, creation: ({ [(string)]: ({ ((unknown)) }) }))
 			load_player(Player)
 			alloc(1)
 			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
-			if creation == nil then
-				alloc(1)
-				buffer.writeu8(outgoing_buff, outgoing_apos, 0)
-			else
-				alloc(1)
-				buffer.writeu8(outgoing_buff, outgoing_apos, 1)
-				table.insert(outgoing_inst, creation)
-			end
-			if root_id == nil then
-				alloc(1)
-				buffer.writeu8(outgoing_buff, outgoing_apos, 0)
-			else
-				alloc(1)
-				buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			local len_pos_1 = alloc(2)
+			local len_11 = 0
+			for k_1, v_1 in creation do
+				len_11 = len_11 + 1
+				local len_12 = #k_1
 				alloc(2)
-				buffer.writeu16(outgoing_buff, outgoing_apos, root_id)
+				buffer.writeu16(outgoing_buff, outgoing_apos, len_12)
+				alloc(len_12)
+				buffer.writestring(outgoing_buff, outgoing_apos, k_1, len_12)
+				local len_13 = #v_1
+				alloc(2)
+				buffer.writeu16(outgoing_buff, outgoing_apos, len_13)
+				for i_6 = 1, len_13 do
+					local val_6 = v_1[i_6]
+					if val_6 == nil then
+						alloc(1)
+						buffer.writeu8(outgoing_buff, outgoing_apos, 0)
+					else
+						alloc(1)
+						buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+						table.insert(outgoing_inst, val_6)
+					end
+				end
 			end
+			buffer.writeu16(outgoing_buff, len_pos_1, len_11)
 			player_map[Player] = save()
 		end,
-		FireAll = function(creation: ((unknown)), root_id: ((number)?))
+		FireAll = function(creation: ({ [(string)]: ({ ((unknown)) }) }))
 			load_empty()
 			alloc(1)
 			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
-			if creation == nil then
-				alloc(1)
-				buffer.writeu8(outgoing_buff, outgoing_apos, 0)
-			else
-				alloc(1)
-				buffer.writeu8(outgoing_buff, outgoing_apos, 1)
-				table.insert(outgoing_inst, creation)
-			end
-			if root_id == nil then
-				alloc(1)
-				buffer.writeu8(outgoing_buff, outgoing_apos, 0)
-			else
-				alloc(1)
-				buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			local len_pos_2 = alloc(2)
+			local len_14 = 0
+			for k_2, v_2 in creation do
+				len_14 = len_14 + 1
+				local len_15 = #k_2
 				alloc(2)
-				buffer.writeu16(outgoing_buff, outgoing_apos, root_id)
+				buffer.writeu16(outgoing_buff, outgoing_apos, len_15)
+				alloc(len_15)
+				buffer.writestring(outgoing_buff, outgoing_apos, k_2, len_15)
+				local len_16 = #v_2
+				alloc(2)
+				buffer.writeu16(outgoing_buff, outgoing_apos, len_16)
+				for i_7 = 1, len_16 do
+					local val_7 = v_2[i_7]
+					if val_7 == nil then
+						alloc(1)
+						buffer.writeu8(outgoing_buff, outgoing_apos, 0)
+					else
+						alloc(1)
+						buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+						table.insert(outgoing_inst, val_7)
+					end
+				end
+			end
+			buffer.writeu16(outgoing_buff, len_pos_2, len_14)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in Players:GetPlayers() do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+		FireExcept = function(Except: Player, creation: ({ [(string)]: ({ ((unknown)) }) }))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			local len_pos_3 = alloc(2)
+			local len_17 = 0
+			for k_3, v_3 in creation do
+				len_17 = len_17 + 1
+				local len_18 = #k_3
+				alloc(2)
+				buffer.writeu16(outgoing_buff, outgoing_apos, len_18)
+				alloc(len_18)
+				buffer.writestring(outgoing_buff, outgoing_apos, k_3, len_18)
+				local len_19 = #v_3
+				alloc(2)
+				buffer.writeu16(outgoing_buff, outgoing_apos, len_19)
+				for i_8 = 1, len_19 do
+					local val_8 = v_3[i_8]
+					if val_8 == nil then
+						alloc(1)
+						buffer.writeu8(outgoing_buff, outgoing_apos, 0)
+					else
+						alloc(1)
+						buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+						table.insert(outgoing_inst, val_8)
+					end
+				end
+			end
+			buffer.writeu16(outgoing_buff, len_pos_3, len_17)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in Players:GetPlayers() do
+				if player ~= Except then
+					load_player(player)
+					alloc(used)
+					buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+					table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+					player_map[player] = save()
+				end
+			end
+		end,
+		FireList = function(List: { Player }, creation: ({ [(string)]: ({ ((unknown)) }) }))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			local len_pos_4 = alloc(2)
+			local len_20 = 0
+			for k_4, v_4 in creation do
+				len_20 = len_20 + 1
+				local len_21 = #k_4
+				alloc(2)
+				buffer.writeu16(outgoing_buff, outgoing_apos, len_21)
+				alloc(len_21)
+				buffer.writestring(outgoing_buff, outgoing_apos, k_4, len_21)
+				local len_22 = #v_4
+				alloc(2)
+				buffer.writeu16(outgoing_buff, outgoing_apos, len_22)
+				for i_9 = 1, len_22 do
+					local val_9 = v_4[i_9]
+					if val_9 == nil then
+						alloc(1)
+						buffer.writeu8(outgoing_buff, outgoing_apos, 0)
+					else
+						alloc(1)
+						buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+						table.insert(outgoing_inst, val_9)
+					end
+				end
+			end
+			buffer.writeu16(outgoing_buff, len_pos_4, len_20)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in List do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+		FireSet = function(Set: { [Player]: true }, creation: ({ [(string)]: ({ ((unknown)) }) }))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			local len_pos_5 = alloc(2)
+			local len_23 = 0
+			for k_5, v_5 in creation do
+				len_23 = len_23 + 1
+				local len_24 = #k_5
+				alloc(2)
+				buffer.writeu16(outgoing_buff, outgoing_apos, len_24)
+				alloc(len_24)
+				buffer.writestring(outgoing_buff, outgoing_apos, k_5, len_24)
+				local len_25 = #v_5
+				alloc(2)
+				buffer.writeu16(outgoing_buff, outgoing_apos, len_25)
+				for i_10 = 1, len_25 do
+					local val_10 = v_5[i_10]
+					if val_10 == nil then
+						alloc(1)
+						buffer.writeu8(outgoing_buff, outgoing_apos, 0)
+					else
+						alloc(1)
+						buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+						table.insert(outgoing_inst, val_10)
+					end
+				end
+			end
+			buffer.writeu16(outgoing_buff, len_pos_5, len_23)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for player in Set do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+	},
+	RequestCreations = {
+		Fire = function(Player: Player, creation: ({ ({ [(string)]: ({ ((unknown)) }) }) }))
+			load_player(Player)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			local len_26 = #creation
+			alloc(2)
+			buffer.writeu16(outgoing_buff, outgoing_apos, len_26)
+			for i_11 = 1, len_26 do
+				local val_11 = creation[i_11]
+				local len_pos_6 = alloc(2)
+				local len_27 = 0
+				for k_6, v_6 in val_11 do
+					len_27 = len_27 + 1
+					local len_28 = #k_6
+					alloc(2)
+					buffer.writeu16(outgoing_buff, outgoing_apos, len_28)
+					alloc(len_28)
+					buffer.writestring(outgoing_buff, outgoing_apos, k_6, len_28)
+					local len_29 = #v_6
+					alloc(2)
+					buffer.writeu16(outgoing_buff, outgoing_apos, len_29)
+					for i_12 = 1, len_29 do
+						local val_12 = v_6[i_12]
+						if val_12 == nil then
+							alloc(1)
+							buffer.writeu8(outgoing_buff, outgoing_apos, 0)
+						else
+							alloc(1)
+							buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+							table.insert(outgoing_inst, val_12)
+						end
+					end
+				end
+				buffer.writeu16(outgoing_buff, len_pos_6, len_27)
+			end
+			player_map[Player] = save()
+		end,
+		FireAll = function(creation: ({ ({ [(string)]: ({ ((unknown)) }) }) }))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			local len_30 = #creation
+			alloc(2)
+			buffer.writeu16(outgoing_buff, outgoing_apos, len_30)
+			for i_13 = 1, len_30 do
+				local val_13 = creation[i_13]
+				local len_pos_7 = alloc(2)
+				local len_31 = 0
+				for k_7, v_7 in val_13 do
+					len_31 = len_31 + 1
+					local len_32 = #k_7
+					alloc(2)
+					buffer.writeu16(outgoing_buff, outgoing_apos, len_32)
+					alloc(len_32)
+					buffer.writestring(outgoing_buff, outgoing_apos, k_7, len_32)
+					local len_33 = #v_7
+					alloc(2)
+					buffer.writeu16(outgoing_buff, outgoing_apos, len_33)
+					for i_14 = 1, len_33 do
+						local val_14 = v_7[i_14]
+						if val_14 == nil then
+							alloc(1)
+							buffer.writeu8(outgoing_buff, outgoing_apos, 0)
+						else
+							alloc(1)
+							buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+							table.insert(outgoing_inst, val_14)
+						end
+					end
+				end
+				buffer.writeu16(outgoing_buff, len_pos_7, len_31)
 			end
 			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
 			for _, player in Players:GetPlayers() do
@@ -444,26 +666,40 @@ local returns = {
 				player_map[player] = save()
 			end
 		end,
-		FireExcept = function(Except: Player, creation: ((unknown)), root_id: ((number)?))
+		FireExcept = function(Except: Player, creation: ({ ({ [(string)]: ({ ((unknown)) }) }) }))
 			load_empty()
 			alloc(1)
-			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
-			if creation == nil then
-				alloc(1)
-				buffer.writeu8(outgoing_buff, outgoing_apos, 0)
-			else
-				alloc(1)
-				buffer.writeu8(outgoing_buff, outgoing_apos, 1)
-				table.insert(outgoing_inst, creation)
-			end
-			if root_id == nil then
-				alloc(1)
-				buffer.writeu8(outgoing_buff, outgoing_apos, 0)
-			else
-				alloc(1)
-				buffer.writeu8(outgoing_buff, outgoing_apos, 1)
-				alloc(2)
-				buffer.writeu16(outgoing_buff, outgoing_apos, root_id)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			local len_34 = #creation
+			alloc(2)
+			buffer.writeu16(outgoing_buff, outgoing_apos, len_34)
+			for i_15 = 1, len_34 do
+				local val_15 = creation[i_15]
+				local len_pos_8 = alloc(2)
+				local len_35 = 0
+				for k_8, v_8 in val_15 do
+					len_35 = len_35 + 1
+					local len_36 = #k_8
+					alloc(2)
+					buffer.writeu16(outgoing_buff, outgoing_apos, len_36)
+					alloc(len_36)
+					buffer.writestring(outgoing_buff, outgoing_apos, k_8, len_36)
+					local len_37 = #v_8
+					alloc(2)
+					buffer.writeu16(outgoing_buff, outgoing_apos, len_37)
+					for i_16 = 1, len_37 do
+						local val_16 = v_8[i_16]
+						if val_16 == nil then
+							alloc(1)
+							buffer.writeu8(outgoing_buff, outgoing_apos, 0)
+						else
+							alloc(1)
+							buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+							table.insert(outgoing_inst, val_16)
+						end
+					end
+				end
+				buffer.writeu16(outgoing_buff, len_pos_8, len_35)
 			end
 			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
 			for _, player in Players:GetPlayers() do
@@ -476,26 +712,40 @@ local returns = {
 				end
 			end
 		end,
-		FireList = function(List: { Player }, creation: ((unknown)), root_id: ((number)?))
+		FireList = function(List: { Player }, creation: ({ ({ [(string)]: ({ ((unknown)) }) }) }))
 			load_empty()
 			alloc(1)
-			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
-			if creation == nil then
-				alloc(1)
-				buffer.writeu8(outgoing_buff, outgoing_apos, 0)
-			else
-				alloc(1)
-				buffer.writeu8(outgoing_buff, outgoing_apos, 1)
-				table.insert(outgoing_inst, creation)
-			end
-			if root_id == nil then
-				alloc(1)
-				buffer.writeu8(outgoing_buff, outgoing_apos, 0)
-			else
-				alloc(1)
-				buffer.writeu8(outgoing_buff, outgoing_apos, 1)
-				alloc(2)
-				buffer.writeu16(outgoing_buff, outgoing_apos, root_id)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			local len_38 = #creation
+			alloc(2)
+			buffer.writeu16(outgoing_buff, outgoing_apos, len_38)
+			for i_17 = 1, len_38 do
+				local val_17 = creation[i_17]
+				local len_pos_9 = alloc(2)
+				local len_39 = 0
+				for k_9, v_9 in val_17 do
+					len_39 = len_39 + 1
+					local len_40 = #k_9
+					alloc(2)
+					buffer.writeu16(outgoing_buff, outgoing_apos, len_40)
+					alloc(len_40)
+					buffer.writestring(outgoing_buff, outgoing_apos, k_9, len_40)
+					local len_41 = #v_9
+					alloc(2)
+					buffer.writeu16(outgoing_buff, outgoing_apos, len_41)
+					for i_18 = 1, len_41 do
+						local val_18 = v_9[i_18]
+						if val_18 == nil then
+							alloc(1)
+							buffer.writeu8(outgoing_buff, outgoing_apos, 0)
+						else
+							alloc(1)
+							buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+							table.insert(outgoing_inst, val_18)
+						end
+					end
+				end
+				buffer.writeu16(outgoing_buff, len_pos_9, len_39)
 			end
 			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
 			for _, player in List do
@@ -506,26 +756,40 @@ local returns = {
 				player_map[player] = save()
 			end
 		end,
-		FireSet = function(Set: { [Player]: true }, creation: ((unknown)), root_id: ((number)?))
+		FireSet = function(Set: { [Player]: true }, creation: ({ ({ [(string)]: ({ ((unknown)) }) }) }))
 			load_empty()
 			alloc(1)
-			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
-			if creation == nil then
-				alloc(1)
-				buffer.writeu8(outgoing_buff, outgoing_apos, 0)
-			else
-				alloc(1)
-				buffer.writeu8(outgoing_buff, outgoing_apos, 1)
-				table.insert(outgoing_inst, creation)
-			end
-			if root_id == nil then
-				alloc(1)
-				buffer.writeu8(outgoing_buff, outgoing_apos, 0)
-			else
-				alloc(1)
-				buffer.writeu8(outgoing_buff, outgoing_apos, 1)
-				alloc(2)
-				buffer.writeu16(outgoing_buff, outgoing_apos, root_id)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			local len_42 = #creation
+			alloc(2)
+			buffer.writeu16(outgoing_buff, outgoing_apos, len_42)
+			for i_19 = 1, len_42 do
+				local val_19 = creation[i_19]
+				local len_pos_10 = alloc(2)
+				local len_43 = 0
+				for k_10, v_10 in val_19 do
+					len_43 = len_43 + 1
+					local len_44 = #k_10
+					alloc(2)
+					buffer.writeu16(outgoing_buff, outgoing_apos, len_44)
+					alloc(len_44)
+					buffer.writestring(outgoing_buff, outgoing_apos, k_10, len_44)
+					local len_45 = #v_10
+					alloc(2)
+					buffer.writeu16(outgoing_buff, outgoing_apos, len_45)
+					for i_20 = 1, len_45 do
+						local val_20 = v_10[i_20]
+						if val_20 == nil then
+							alloc(1)
+							buffer.writeu8(outgoing_buff, outgoing_apos, 0)
+						else
+							alloc(1)
+							buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+							table.insert(outgoing_inst, val_20)
+						end
+					end
+				end
+				buffer.writeu16(outgoing_buff, len_pos_10, len_43)
 			end
 			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
 			for player in Set do
@@ -541,7 +805,7 @@ local returns = {
 		Fire = function(Player: Player, id: (number))
 			load_player(Player)
 			alloc(1)
-			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 3)
 			alloc(2)
 			buffer.writeu16(outgoing_buff, outgoing_apos, id)
 			player_map[Player] = save()
@@ -549,7 +813,7 @@ local returns = {
 		FireAll = function(id: (number))
 			load_empty()
 			alloc(1)
-			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 3)
 			alloc(2)
 			buffer.writeu16(outgoing_buff, outgoing_apos, id)
 			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
@@ -564,7 +828,7 @@ local returns = {
 		FireExcept = function(Except: Player, id: (number))
 			load_empty()
 			alloc(1)
-			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 3)
 			alloc(2)
 			buffer.writeu16(outgoing_buff, outgoing_apos, id)
 			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
@@ -581,7 +845,7 @@ local returns = {
 		FireList = function(List: { Player }, id: (number))
 			load_empty()
 			alloc(1)
-			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 3)
 			alloc(2)
 			buffer.writeu16(outgoing_buff, outgoing_apos, id)
 			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
@@ -596,7 +860,7 @@ local returns = {
 		FireSet = function(Set: { [Player]: true }, id: (number))
 			load_empty()
 			alloc(1)
-			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 3)
 			alloc(2)
 			buffer.writeu16(outgoing_buff, outgoing_apos, id)
 			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst

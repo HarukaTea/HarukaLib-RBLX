@@ -7,6 +7,8 @@ local RepS = game:GetService("ReplicatedStorage")
 local Signal = require(RepS.HarukaShared.Shared.Signal)
 local Events = require(script.Parent.ReplicaEvents)
 
+local isSimilar = require(RepS.HarukaShared.Shared.Fusion.Utility.isSimilar)
+
 
 local REQUEST_DATA_REPEAT = 2
 
@@ -57,16 +59,15 @@ function Replica.RequestData()
 	DataRequestStarted = true
 
 	task.spawn(function()
-		local status = Events.RequestData.Call()
-		while task.wait(REQUEST_DATA_REPEAT) do
+		while true do
+			local status = Events.RequestData.Call()
 			if status == "Success" then
 				Replica.IsReady = true
 
 				print(`[ReplicaClient]: Initial data received`)
 				break
-			else
-				status = Events.RequestData.Call()
 			end
+			task.wait(REQUEST_DATA_REPEAT)
 		end
 	end)
 end
@@ -122,7 +123,13 @@ function Replica:Set(path: {string}, value: any)
 	end
 	local last_key = path[#path]
 	local old_value = pointer[last_key]
+
+	local new = value
+	local isTheSame = isSimilar(old_value, new)
+
 	pointer[last_key] = value
+
+	if isTheSame then return end
 
 
 	-- Firing signals:
@@ -217,11 +224,13 @@ end
 
 Events.SetData.On(function(id: number, path: {}, value: any)
 	local replica = GetInternalReplica(id)
+	if not replica then return end
 
 	replica:Set(path, value)
 end)
 
-Events.CreateData.On(function(creation: {}, root_id: number?) -- (creation) or ({creation, ...})
+
+local function _handleCreation(creation: {}, root_id: number?)
 	local announce_buffer = {} -- {replica, ...} -- Announce these
 
 	BreadthCreationSort(creation, root_id, function(id: number, self_creation: {}) -- self_creation = {token, tags, data, parent_id, write_module}
@@ -262,10 +271,14 @@ Events.CreateData.On(function(creation: {}, root_id: number?) -- (creation) or (
 			end
 		end
 	end
-end)
+end
+Events.CreateData.On(_handleCreation)
+Events.RequestCreations.On(_handleCreation)
 
 Events.DestroyData.On(function(id: number)
 	local replica = GetInternalReplica(id)
+	if not replica then return end
+
 
 	DestroyReplica(replica)
 end)

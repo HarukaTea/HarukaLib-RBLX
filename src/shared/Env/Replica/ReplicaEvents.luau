@@ -112,6 +112,9 @@ if not RunService:IsRunning() then
 		CreateData = table.freeze({
 			On = noop
 		}),
+		RequestCreations = table.freeze({
+			On = noop
+		}),
 		DestroyData = table.freeze({
 			On = noop
 		}),
@@ -145,8 +148,8 @@ end
 
 RunService.Heartbeat:Connect(SendEvents)
 
-local reliable_events = table.create(4)
-local reliable_event_queue: { [number]: { any } } = table.create(4)
+local reliable_events = table.create(5)
+local reliable_event_queue: { [number]: { any } } = table.create(5)
 local function_call_id = 0
 reliable_events[0] = {}
 reliable_event_queue[0] = {}
@@ -154,7 +157,9 @@ reliable_events[1] = {}
 reliable_event_queue[1] = {}
 reliable_events[2] = {}
 reliable_event_queue[2] = {}
-reliable_event_queue[3] = table.create(255)
+reliable_events[3] = {}
+reliable_event_queue[3] = {}
+reliable_event_queue[4] = table.create(255)
 reliable.OnClientEvent:Connect(function(buff, inst)
 	incoming_buff = buff
 	incoming_inst = inst
@@ -191,31 +196,65 @@ reliable.OnClientEvent:Connect(function(buff, inst)
 				end
 			end
 		elseif id == 1 then
-			local value, value2
-			if buffer.readu8(incoming_buff, read(1)) == 1 then
-				incoming_ipos = incoming_ipos + 1
-				value = incoming_inst[incoming_ipos]
-			else
-				value = nil
-			end
-			if buffer.readu8(incoming_buff, read(1)) == 1 then
-				value2 = buffer.readu16(incoming_buff, read(2))
-			else
-				value2 = nil
+			local value
+			value = {}
+			for _ = 1, buffer.readu16(incoming_buff, read(2)) do
+				local key_1
+				local val_2
+				local len_3 = buffer.readu16(incoming_buff, read(2))
+				key_1 = buffer.readstring(incoming_buff, read(len_3), len_3)
+				val_2 = {}
+				local len_4 = buffer.readu16(incoming_buff, read(2))
+				for i_2 = 1, len_4 do
+					local val_3
+					if buffer.readu8(incoming_buff, read(1)) == 1 then
+						incoming_ipos = incoming_ipos + 1
+						val_3 = incoming_inst[incoming_ipos]
+					else
+						val_3 = nil
+					end
+					val_2[i_2] = val_3
+				end
+				value[key_1] = val_2
 			end
 			if reliable_events[1][1] then
 				for _, cb in reliable_events[1] do
-					task.spawn(cb, value, value2)
+					task.spawn(cb, value)
 				end
 			else
-				table.insert(reliable_event_queue[1], { value, value2 })
+				table.insert(reliable_event_queue[1], value)
 				if #reliable_event_queue[1] > 64 then
 					warn(`[ZAP] {#reliable_event_queue[1]} events in queue for CreateData. Did you forget to attach a listener?`)
 				end
 			end
 		elseif id == 2 then
 			local value
-			value = buffer.readu16(incoming_buff, read(2))
+			value = {}
+			local len_5 = buffer.readu16(incoming_buff, read(2))
+			for i_3 = 1, len_5 do
+				local val_4
+				val_4 = {}
+				for _ = 1, buffer.readu16(incoming_buff, read(2)) do
+					local key_2
+					local val_5
+					local len_6 = buffer.readu16(incoming_buff, read(2))
+					key_2 = buffer.readstring(incoming_buff, read(len_6), len_6)
+					val_5 = {}
+					local len_7 = buffer.readu16(incoming_buff, read(2))
+					for i_4 = 1, len_7 do
+						local val_6
+						if buffer.readu8(incoming_buff, read(1)) == 1 then
+							incoming_ipos = incoming_ipos + 1
+							val_6 = incoming_inst[incoming_ipos]
+						else
+							val_6 = nil
+						end
+						val_5[i_4] = val_6
+					end
+					val_4[key_2] = val_5
+				end
+				value[i_3] = val_4
+			end
 			if reliable_events[2][1] then
 				for _, cb in reliable_events[2] do
 					task.spawn(cb, value)
@@ -223,10 +262,23 @@ reliable.OnClientEvent:Connect(function(buff, inst)
 			else
 				table.insert(reliable_event_queue[2], value)
 				if #reliable_event_queue[2] > 64 then
-					warn(`[ZAP] {#reliable_event_queue[2]} events in queue for DestroyData. Did you forget to attach a listener?`)
+					warn(`[ZAP] {#reliable_event_queue[2]} events in queue for RequestCreations. Did you forget to attach a listener?`)
 				end
 			end
 		elseif id == 3 then
+			local value
+			value = buffer.readu16(incoming_buff, read(2))
+			if reliable_events[3][1] then
+				for _, cb in reliable_events[3] do
+					task.spawn(cb, value)
+				end
+			else
+				table.insert(reliable_event_queue[3], value)
+				if #reliable_event_queue[3] > 64 then
+					warn(`[ZAP] {#reliable_event_queue[3]} events in queue for DestroyData. Did you forget to attach a listener?`)
+				end
+			end
+		elseif id == 4 then
 			local call_id = buffer.readu8(incoming_buff, read(1))
 			local value
 			value = {}
@@ -238,12 +290,12 @@ reliable.OnClientEvent:Connect(function(buff, inst)
 			else
 				error("Invalid enumerator")
 			end
-			local thread = reliable_event_queue[3][call_id]
+			local thread = reliable_event_queue[4][call_id]
 			-- When using actors it's possible for multiple Zap clients to exist, but only one called the Zap remote function.
 			if thread then
 				task.spawn(thread, value)
 			end
-			reliable_event_queue[3][call_id] = nil
+			reliable_event_queue[4][call_id] = nil
 		else
 			error("Unknown event id")
 		end
@@ -264,10 +316,10 @@ local returns = {
 		end,
 	},
 	CreateData = {
-		On = function(Callback: (creation: ((unknown)), root_id: ((number)?)) -> ())
+		On = function(Callback: (creation: ({ [(string)]: ({ ((unknown)) }) })) -> ())
 			table.insert(reliable_events[1], Callback)
 			for _, value in reliable_event_queue[1] do
-				task.spawn(Callback, unpack(value))
+				task.spawn(Callback, value)
 			end
 			reliable_event_queue[1] = {}
 			return function()
@@ -275,8 +327,8 @@ local returns = {
 			end
 		end,
 	},
-	DestroyData = {
-		On = function(Callback: (id: (number)) -> ())
+	RequestCreations = {
+		On = function(Callback: (creation: ({ ({ [(string)]: ({ ((unknown)) }) }) })) -> ())
 			table.insert(reliable_events[2], Callback)
 			for _, value in reliable_event_queue[2] do
 				task.spawn(Callback, value)
@@ -287,19 +339,31 @@ local returns = {
 			end
 		end,
 	},
+	DestroyData = {
+		On = function(Callback: (id: (number)) -> ())
+			table.insert(reliable_events[3], Callback)
+			for _, value in reliable_event_queue[3] do
+				task.spawn(Callback, value)
+			end
+			reliable_event_queue[3] = {}
+			return function()
+				table.remove(reliable_events[3], table.find(reliable_events[3], Callback))
+			end
+		end,
+	},
 	RequestData = {
 		Call = function(): (("Success" | "Failure"))
 			alloc(1)
 			buffer.writeu8(outgoing_buff, outgoing_apos, 0)
 			function_call_id += 1
 			function_call_id %= 256
-			if reliable_event_queue[3][function_call_id] then
+			if reliable_event_queue[4][function_call_id] then
 				function_call_id -= 1
 				error("Zap has more than 256 calls awaiting a response, and therefore this packet has been dropped")
 			end
 			alloc(1)
 			buffer.writeu8(outgoing_buff, outgoing_apos, function_call_id)
-			reliable_event_queue[3][function_call_id] = coroutine.running()
+			reliable_event_queue[4][function_call_id] = coroutine.running()
 			return coroutine.yield()
 		end,
 	},

@@ -8,8 +8,15 @@ opt remote_scope = "HARUKA_CMD"
 funct RequestCommands = {
     call: Async,
     rets: struct {
-        Commands: map {
-            [string]: unknown
+        Commands: struct {
+            Name: string,
+            Alias: string,
+            RankReq: u8,
+            Args: struct {
+                Name: string,
+                Type: string,
+                EnumItems: string[]?
+            }[]
         }[]
     },
 }

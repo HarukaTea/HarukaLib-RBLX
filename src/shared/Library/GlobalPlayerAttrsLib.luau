@@ -49,9 +49,6 @@ function GlobalPlayerAttrsLib.new(userId: number, props: {
     end
 
 
-    self.Trackers = {}
-    self.SubscribeFusionVals = {}
-
     self.scope = Fusion.scoped(Fusion)
 
     self.Add, self.Empty = HarukaLib.Bin()
@@ -59,7 +56,6 @@ function GlobalPlayerAttrsLib.new(userId: number, props: {
     self.Add(function()
         Fusion.doCleanup(self.scope)
     end)
-    self.Add(self.ReplicaObjReady)
 
     globalPlayerAttrsObjPool[tostring(userId)] = self
 
@@ -146,14 +142,6 @@ function GlobalPlayerAttrsLib:Subscribe(player: Player, attr: string, tracker: (
     local stateVal = Fusion.Value(self.scope, nil)
     local playerUserId = tostring(player.UserId)
 
-    if not self.SubscribeFusionVals[playerUserId] then self.SubscribeFusionVals[playerUserId] = {} end
-    self.SubscribeFusionVals[playerUserId][attr] = stateVal
-
-    if not self.Trackers[playerUserId] then self.Trackers[playerUserId] = {} end
-    if not self.Trackers[playerUserId][attr] then self.Trackers[playerUserId][attr] = {} end
-
-    table.insert(self.Trackers[playerUserId][attr], tracker)
-
 
     if RunService:IsClient() then
         local conn = self.ReplicaObj:OnSet({ tostring(player.UserId), attr }, function(new: any)
@@ -179,9 +167,7 @@ function GlobalPlayerAttrsLib:Subscribe(player: Player, attr: string, tracker: (
 
     local observer = Fusion.Observer(self.scope, stateVal)
     local disconnectFunc = observer:onBind(function()
-        for _, func in self.Trackers[playerUserId][attr] do
-            func(Fusion.peek(stateVal))
-        end
+        tracker(Fusion.peek(stateVal))
     end)
 
     return disconnectFunc
