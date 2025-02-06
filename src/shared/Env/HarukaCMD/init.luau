@@ -18,15 +18,11 @@ local Promise = require(RepS.HarukaShared.Shared.Promise)
 
 local Events = nil
 if RunService:IsClient() then
-    Events = require(script.HarukaCMDEvents)
+    Events = require(RepS.HarukaShared.Library.Events)
 else
-    Events = require(script.HarukaCMDServerEvents)
+    Events = require(SSS.HarukaServer.Library.ServerEvents)
 end
 
-local GameEvents = nil
-if RunService:IsServer() then
-    GameEvents = require(SSS.HarukaServer.Library.ServerEvents)
-end
 
 local PlayerLib = nil
 if RunService:IsServer() then
@@ -412,7 +408,7 @@ function HarukaCMD:_InitCommandExecutionTracker()
         --// Check if the player has the required rank
         local playerObj = PlayerLib:GetPlayerObjByPlayer(plr)
         if playerObj.Attrs.Rank < realCmd.RankReq then
-            GameEvents.CreateNotify.Fire(plr, "You do not have the required rank to execute this command!")
+            Events.CreateNotify.Fire(plr, "You do not have the required rank to execute this command!")
             return
         end
 
@@ -420,7 +416,7 @@ function HarukaCMD:_InitCommandExecutionTracker()
         --// return true args
         local check, validatedArgs = self:_ValidateCmd(realCmd, cmdArgs)
         if not check then
-            GameEvents.CreateNotify.Fire(plr, "Invalid arguments for command!")
+            Events.CreateNotify.Fire(plr, "Invalid arguments for command!")
             return
         end
 
@@ -436,7 +432,7 @@ function HarukaCMD:_InitCommandExecutionTracker()
         end):catch(function(err)
             warn(tostring(err))
 
-            GameEvents.CreateNotify.Fire(plr, "An error occurred while executing the command!")
+            Events.CreateNotify.Fire(plr, "An error occurred while executing the command!")
         end)
     end)
 end
