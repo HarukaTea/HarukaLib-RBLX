@@ -1098,4 +1098,16 @@ function HarukaLib.TableUtil()
 end
 
 
+--[[
+	A quick helper function to emit particles
+]]
+function HarukaLib:EmitParticles(obj: Instance)
+	for _, child: ParticleEmitter in obj:GetDescendants() do
+		if not child:IsA("ParticleEmitter") then continue end
+
+		child:Emit(child:GetAttribute("EmitCount") or 0)
+	end
+end
+
+
 return table.freeze(HarukaLib)
