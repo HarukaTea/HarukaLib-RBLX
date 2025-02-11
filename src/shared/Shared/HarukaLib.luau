@@ -834,18 +834,29 @@ end
 	pool:Return(obj)
 	```
 ]]
-function HarukaLib.CreatePartPool(obj: Instance, initialAmount: number?)
+function HarukaLib.CreatePartPool(obj: Instance, initialAmount: number?, container: Folder?)
+	container = container or Instance.new("Folder")
+	container.Name = "PartPool_"..obj.Name
+	container.Parent = workspace
+
+
 	local DISTANT_CF = CFrame.new(Vector3.one * 1599 * 40)
 
 	initialAmount = initialAmount or 1
 	initialAmount = math.ceil(initialAmount)
 
+	obj = obj:Clone()
+	obj.Parent = container
+
 	local pool = {
-		Object = obj:Clone(),
+		Object = obj,
 		Available = {},
 	}
 	for _ = 1, initialAmount do
-		table.insert(pool.Available, pool.Object:Clone())
+		local clone = pool.Object:Clone()
+		clone.Parent = container
+
+		table.insert(pool.Available, clone)
 	end
 
 	function pool:Get()
@@ -855,13 +866,19 @@ function HarukaLib.CreatePartPool(obj: Instance, initialAmount: number?)
 			finalObj = table.remove(pool.Available, i)
 			return finalObj
 		else
-			return pool.Object:Clone()
+			local newObj = pool.Object:Clone()
+			newObj.Parent = container
+
+			return newObj
 		end
 	end
 	function pool:Return(object: Instance)
 		object.CFrame = DISTANT_CF
 
 		table.insert(pool.Available, object)
+	end
+	function pool:Destroy()
+		container:Destroy()
 	end
 
 	return pool

@@ -1,8 +1,8 @@
 --!nocheck
 
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local RepS = game:GetService("ReplicatedStorage")
-local UserInputService = game:GetService("UserInputService")
 
 local Components = require(RepS.HarukaShared.UIAtlas.HarukaComponents)
 local Fusion = require(RepS.HarukaShared.Shared.Fusion)
@@ -12,14 +12,20 @@ local Children = Fusion.Children
 return function (scope: Fusion.Scope, props: {
     IsShownVal: Fusion.Value,
     CMDInput: Fusion.Value,
+    CMDSearchInput: Fusion.Value,
     Intellisense: Fusion.Value,
     IntellisensePointer: Fusion.Value,
     ItemIntellisensePointer: Fusion.Value,
     ExtraArgs: { Fusion.Value },
+    ExtraArgsSearch: { Fusion.Value },
 
     ItemIntellisense: Fusion.Value,
 
 }, self: table)
+
+    local isSelectingCMD = Fusion.Value(scope, false)
+
+
     return Components.HarukaScreenGui(scope, {
         Name = "HarukaCMD",
         DisplayOrder = 1000,
@@ -34,22 +40,36 @@ return function (scope: Fusion.Scope, props: {
             [Children] = {
                 Components.Frame(scope, {
                     Name = "Input",
-                    Size = UDim2.new(1, 0, 0, 31),
+                    Size = UDim2.fromScale(1, 0.07),
                     Position = UDim2.fromScale(0.5, 1),
                     AnchorPoint = Vector2.new(0.5, 1),
 
                     [Children] = {
-                        Components.TextLabel(scope, {
-                            Name = "CMD",
+                        Components.UIListLayout(scope, {
+                            VerticalAlignment = Enum.VerticalAlignment.Bottom,
+                            HorizontalAlignment = Enum.HorizontalAlignment.Center,
+                        }),
+
+
+                        Components.TextButton(scope, {
+                            Name = "CMDPreview",
+                            AutoButtonColor = false,
                             AutoLocalize = false,
                             RichText = true,
-
+                            LayoutOrder = 2,
+                            Size = UDim2.fromScale(1, 0.8),
                             TextXAlignment = Enum.TextXAlignment.Left,
                             BackgroundTransparency = 0,
-                            BackgroundColor3 = Color3.fromRGB(),
 
                             [Fusion.Out("Text")] = props.CMDInput,
 
+
+                            BackgroundColor3 = Fusion.Computed(scope, function(use: Fusion.Use, _)
+                                return if use(isSelectingCMD) then Color3.fromRGB(236, 229, 216) else Color3.fromRGB(28, 28, 37)
+                            end),
+                            TextColor3 = Fusion.Computed(scope, function(use: Fusion.Use, _)
+                                return if use(isSelectingCMD) then Color3.new() else Color3.fromRGB(236, 229, 216)
+                            end),
                             Text = Fusion.Computed(scope, function(use: Fusion.Use, _)
                                 local text = use(props.CMDInput) :: string
 
@@ -65,8 +85,41 @@ return function (scope: Fusion.Scope, props: {
 
                                 return extraArgsText
                             end),
-                            TextColor3 = Fusion.Computed(scope, function(use: Fusion.Use, _)
-                                return if #use(props.Intellisense) <= 0 then Color3.new(1, 0, 0) else Color3.fromHex('#81ecec')
+
+                            [Fusion.OnEvent("MouseEnter")] = function()
+                                isSelectingCMD:set(true)
+                            end,
+                            [Fusion.OnEvent("MouseLeave")] = function()
+                                isSelectingCMD:set(false)
+                            end,
+                            [Fusion.OnEvent("MouseButton1Click")] = function()
+                                self.ExecuteCommandFunc()
+                            end,
+
+                            [Children] = {
+                                Components.UIPadding(scope, {
+                                    PaddingTop = UDim.new(0.15, 0),
+                                    PaddingLeft = UDim.new(0.01, 0),
+                                    PaddingRight = UDim.new(0.01, 0),
+                                    PaddingBottom = UDim.new(0.15, 0)
+                                })
+                            }
+                        }),
+                        Components.TextBox(scope, {
+                            Name = "CMDSearch",
+                            AutoLocalize = false,
+                            RichText = true,
+                            LayoutOrder = 1,
+                            Size = UDim2.fromScale(1, 0.8),
+                            TextXAlignment = Enum.TextXAlignment.Left,
+                            BackgroundTransparency = 0,
+                            PlaceholderText = "Search Commands Here",
+                            PlaceholderColor3 = Color3.fromRGB(159, 159, 159),
+
+                            [Fusion.Out("Text")] = props.CMDSearchInput,
+
+                            Text = Fusion.Computed(scope, function(use: Fusion.Use, _)
+                                return use(props.CMDSearchInput)
                             end),
 
                             [Children] = {
@@ -83,7 +136,7 @@ return function (scope: Fusion.Scope, props: {
                 Components.Frame(scope, {
                     Name = "CMDIntellisense",
                     Size = UDim2.new(1, 0, 0, 23),
-                    Position = UDim2.new(0.5, 0, 1, -31),
+                    Position = UDim2.fromScale(0.5, 1 - 0.07 * 2),
                     AnchorPoint = Vector2.new(0.5, 1),
 
                     [Children] = {
@@ -103,10 +156,10 @@ return function (scope: Fusion.Scope, props: {
                                 LayoutOrder = index + 1,
 
                                 BackgroundColor3 = Fusion.Computed(localScope, function(use: Fusion.Use, _)
-                                    return if use(props.IntellisensePointer) == index then Color3.new(1, 1, 1) else Color3.fromRGB(28, 28, 37)
+                                    return if use(props.IntellisensePointer) == index then Color3.fromRGB(236, 229, 216) else Color3.fromRGB(28, 28, 37)
                                 end),
                                 TextColor3 = Fusion.Computed(localScope, function(use: Fusion.Use, _)
-                                    return if use(props.IntellisensePointer) == index then Color3.new() else Color3.new(1, 1, 1)
+                                    return if use(props.IntellisensePointer) == index then Color3.new() else Color3.fromRGB(236, 229, 216)
                                 end),
 
                                 Text = Fusion.Computed(localScope, function()
@@ -162,14 +215,37 @@ return function (scope: Fusion.Scope, props: {
                                     local argType = arg.Type :: string
 
                                     local intellisenseItems = Fusion.Value(localScope, {})
+                                    local extraArgSearchVal = props.ExtraArgsSearch[index]
 
                                     if argType == "enum" then
                                         intellisenseItems:set(arg.EnumItems)
 
+                                        local searchObserver = Fusion.Observer(localScope, extraArgSearchVal)
+                                        searchObserver:onBind(function()
+                                            local searchText = Fusion.peek(extraArgSearchVal) :: string
+                                            local realSearch = string.gsub(searchText, " ", "")
+
+                                            if realSearch == "" then
+                                                intellisenseItems:set(arg.EnumItems)
+                                                return
+                                            end
+
+                                            local accepted = {}
+                                            pcall(function()
+                                                for _, option: string in arg.EnumItems do
+                                                    if string.find(string.lower(option), string.lower(realSearch)) then
+                                                        table.insert(accepted, option)
+                                                    end
+                                                end
+                                            end)
+
+                                            intellisenseItems:set(accepted)
+                                        end)
+
                                     elseif argType == "player" or argType == "players" then
                                         local function __getPlayers()
                                             local players = {}
-                                            for _, player: Player in Players:GetPlayers() do
+                                            for _, player: Player in CollectionService:GetTagged("PlayerEntity") do
                                                 table.insert(players, player.Name)
                                             end
 
@@ -180,8 +256,34 @@ return function (scope: Fusion.Scope, props: {
                                             intellisenseItems:set(players)
                                         end
                                         __getPlayers()
-                                        table.insert(localScope, Players.PlayerAdded:Connect(__getPlayers))
-                                        table.insert(localScope, Players.PlayerRemoving:Connect(__getPlayers))
+                                        table.insert(localScope, CollectionService:GetInstanceAddedSignal("PlayerEntity"):Connect(__getPlayers))
+                                        table.insert(localScope, CollectionService:GetInstanceRemovedSignal("PlayerEntity"):Connect(__getPlayers))
+
+
+                                        local searchObserver = Fusion.Observer(localScope, extraArgSearchVal)
+                                        searchObserver:onBind(function()
+                                            local searchText = Fusion.peek(extraArgSearchVal) :: string
+                                            local realSearch = string.gsub(searchText, " ", "")
+
+                                            if realSearch == "" then
+                                                __getPlayers()
+                                                return
+                                            end
+
+                                            local accepted = {}
+                                            pcall(function()
+                                                for _, player: Player in CollectionService:GetTagged("PlayerEntity") do
+                                                    if string.find(string.lower(player.Name), string.lower(realSearch)) then
+                                                        table.insert(accepted, player.Name)
+                                                    end
+                                                end
+                                            end)
+                                            if argType == "players" then
+                                                table.insert(accepted, "All")
+                                            end
+
+                                            intellisenseItems:set(accepted)
+                                        end)
                                     else
                                         local extraArgVal = props.ExtraArgs[index]
 
@@ -191,12 +293,12 @@ return function (scope: Fusion.Scope, props: {
                                             Size = UDim2.fromScale(0.23, 1),
                                             TextXAlignment = Enum.TextXAlignment.Left,
                                             BackgroundTransparency = 0,
-                                            BackgroundColor3 = Color3.fromRGB(28, 28, 37),
+                                            BackgroundColor3 = Color3.fromRGB(),
 
                                             [Fusion.Out("Text")] = extraArgVal,
 
-                                            PlaceholderText = "Type here",
-                                            PlaceholderColor3 = Color3.fromRGB(127, 127, 127),
+                                            PlaceholderText = argType,
+                                            PlaceholderColor3 = Color3.fromRGB(159, 159, 159),
 
                                             [Children] = {
                                                 Components.UIPadding(localScope, {
@@ -210,28 +312,6 @@ return function (scope: Fusion.Scope, props: {
                                     end
 
                                     local pointer = Fusion.Value(localScope, 1)
-                                    local function _handlePointer(nextPointer: number)
-                                        if #Fusion.peek(props.Intellisense) > 1 then return end
-                                        if Fusion.peek(props.ItemIntellisensePointer) ~= index then return end
-
-                                        local totalElements = #Fusion.peek(intellisenseItems)
-                                        if totalElements <= 0 then return end
-
-                                        nextPointer = math.clamp(nextPointer, 1, #Fusion.peek(intellisenseItems))
-
-                                        pointer:set(nextPointer)
-                                    end
-
-                                    table.insert(localScope, UserInputService.InputBegan:Connect(function(input, gpe)
-                                        if gpe then return end
-
-                                        if input.KeyCode == Enum.KeyCode.Down then
-                                            _handlePointer(Fusion.peek(pointer) + 1)
-
-                                        elseif input.KeyCode == Enum.KeyCode.Up then
-                                            _handlePointer(Fusion.peek(pointer) - 1)
-                                        end
-                                    end))
 
                                     return index, Components.Frame(localScope, {
                                         Name = arg.Name,
@@ -255,10 +335,10 @@ return function (scope: Fusion.Scope, props: {
                                                     LayoutOrder = iindex + 1,
 
                                                     BackgroundColor3 = Fusion.Computed(llScope, function(use: Fusion.Use, _)
-                                                        return if use(props.ItemIntellisensePointer) == index and use(pointer) == iindex then Color3.new(1, 1, 1) else Color3.fromRGB(28, 28, 37)
+                                                        return if use(props.ItemIntellisensePointer) == index and use(pointer) == iindex then Color3.fromRGB(236, 229, 216) else Color3.fromRGB(28, 28, 37)
                                                     end),
                                                     TextColor3 = Fusion.Computed(llScope, function(use: Fusion.Use, _)
-                                                        return if use(props.ItemIntellisensePointer) == index and use(pointer) == iindex then Color3.new() else Color3.new(1, 1, 1)
+                                                        return if use(props.ItemIntellisensePointer) == index and use(pointer) == iindex then Color3.new() else Color3.fromRGB(236, 229, 216)
                                                     end),
 
                                                     Text = option,
@@ -284,6 +364,28 @@ return function (scope: Fusion.Scope, props: {
                                                     }
                                                 })
                                             end),
+
+                                            Components.TextBox(localScope, {
+                                                Name = arg.Name,
+                                                LayoutOrder = 999,
+                                                TextXAlignment = Enum.TextXAlignment.Left,
+                                                BackgroundTransparency = 0,
+                                                BackgroundColor3 = Color3.fromRGB(),
+
+                                                [Fusion.Out("Text")] = extraArgSearchVal,
+
+                                                PlaceholderText = "Search Object Here",
+                                                PlaceholderColor3 = Color3.fromRGB(159, 159, 159),
+
+                                                [Children] = {
+                                                    Components.UIPadding(localScope, {
+                                                        PaddingTop = UDim.new(0.15, 0),
+                                                        PaddingLeft = UDim.new(0.03, 0),
+                                                        PaddingRight = UDim.new(0.03, 0),
+                                                        PaddingBottom = UDim.new(0.15, 0)
+                                                    })
+                                                }
+                                            })
                                         }
                                     })
                                 end)

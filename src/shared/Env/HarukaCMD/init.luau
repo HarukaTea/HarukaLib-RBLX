@@ -27,6 +27,8 @@ end
 local PlayerLib = nil
 if RunService:IsServer() then
     PlayerLib = require(SSS.HarukaServer.Services.PlayerLib)
+else
+    PlayerLib = require(RepS.HarukaShared.Services.PlayerLib)
 end
 
 
@@ -41,18 +43,22 @@ HarukaCMD.__index = HarukaCMD
 --// Helper functions
 
 --// Constructor
-function HarukaCMD.new(groupId: number)
+function HarukaCMD.new()
     local self = setmetatable({}, HarukaCMD)
 
     if RunService:IsClient() then
-        self.scope = Fusion.scoped(Fusion)
+        self.scope = Fusion.scoped()
         local function Value(val: any) : Fusion.Value
             return Fusion.Value(self.scope, val)
         end
 
+        self.Player = Players.LocalPlayer
+        self.GlobalPlayerObj = PlayerLib:GetPlayerObjByPlayer(self.Player)
+        self.GlobalPlayerAttrsObj = self.GlobalPlayerObj.GlobalPlayerAttrsObj
 
         self.IsShown = Value(false)
         self.CMDInput = Value("")
+        self.CMDSearchInput = Value("")
 
         self.CMDIntellisense = Value({})
         self.ItemIntellisense = Value({})
@@ -62,16 +68,16 @@ function HarukaCMD.new(groupId: number)
         self.ItemAutoCompletePointer = Value(1)
 
         self.ExtraArgs = {}
-        for _ = 1, 7 do
+        self.ExtraArgsSearch = {}
+        for _ = 1, 5 do
             table.insert(self.ExtraArgs, Value(""))
+            table.insert(self.ExtraArgsSearch, Value(""))
         end
     else
 
     end
 
-    self.GroupId = groupId
     self.Commands = {}
-
     self.Add, self.Empty = HarukaLib.Bin()
 
     return self
@@ -81,29 +87,35 @@ end
 
 function HarukaCMD:Init()
     if RunService:IsClient() then
-        self.Rank = false
+        local scope = self.scope :: Fusion.Scope
 
-        Promise.new(function()
-            self.Rank = Players.LocalPlayer:GetRankInGroup(self.GroupId)
-        end):catch(function()
-            self.Rank = 0
-        end)
+        self.Rank = Fusion.Value(scope, self.GlobalPlayerAttrsObj.AttrsObj.Rank)
 
-        self:_InitUI()
-        self:_ListenUITracker()
-        self:_ListenInputTracker()
+        self.Add(self.GlobalPlayerAttrsObj:Subscribe("Rank", function(newRank: number)
+            self.Rank:set(newRank)
+        end))
+
 
         local commands = Events.RequestCommands.Call().Commands
-        repeat wait() until self.Rank
+        repeat wait() until commands
 
-        print("[Haruka CMD] Rank is "..self.Rank)
-        for index: number, cmd in commands do
-            if cmd.RankReq > self.Rank then
-                table.remove(commands, index)
+        print("[Haruka CMD] CMD Inited")
+
+        self.RawCommands = commands
+        self.Commands = {}
+
+        local rankObserver = Fusion.Observer(scope, self.Rank)
+        rankObserver:onBind(function()
+            local afterCommands = table.clone(self.RawCommands)
+
+            for index: number, cmd in afterCommands do
+                if cmd.RankReq > Fusion.peek(self.Rank) then
+                    table.remove(afterCommands, index)
+                end
             end
-        end
 
-        self.Commands = commands
+            self.Commands = afterCommands
+        end)
 
         self.AutoCompleteFunc = function()
             local suggestedCommands = Fusion.peek(self.CMDIntellisense) :: table
@@ -122,8 +134,12 @@ function HarukaCMD:Init()
                 text ..= " "
             end
 
+            local aliasOnly = ""
+            aliasOnly ..= suggestedCommand.Alias
+
             wait()
             self.CMDInput:set(text)
+            self.CMDSearchInput:set(aliasOnly)
         end
         self.ArgAutoCompleteFunc = function(argProps: {
             Option: string,
@@ -145,6 +161,18 @@ function HarukaCMD:Init()
             wait()
             self.CMDInput:set(result)
         end
+        self.ExecuteCommandFunc = function()
+            self.IsShown:set(false)
+
+            Events.ExecuteCommand.Fire({
+                Command = Fusion.peek(self.CMDInput)
+            })
+        end
+
+
+        self:_InitUI()
+        self:_ListenUITracker()
+        self:_ListenInputTracker()
     else
         self:_InitRequestListenTracker()
         self:_InitCommandExecutionTracker()
@@ -183,11 +211,13 @@ function HarukaCMD:_InitUI()
     self.UI = UIComponent(self.scope, {
         IsShownVal = self.IsShown,
         CMDInput = self.CMDInput,
+        CMDSearchInput = self.CMDSearchInput,
         Intellisense = self.CMDIntellisense,
         IntellisensePointer = self.AutoCompletePointer,
         ItemIntellisense = self.ItemIntellisense,
         ItemIntellisensePointer = self.ItemAutoCompletePointer,
         ExtraArgs = self.ExtraArgs,
+        ExtraArgsSearch = self.ExtraArgsSearch,
 
         AutoCompleteFunc = self.AutoCompleteFunc,
     }, self)
@@ -205,47 +235,12 @@ function HarukaCMD:_ListenInputTracker()
 
         self.IsShown:set(not Fusion.peek(self.IsShown))
     end
-    local function _handlePointer(nextPointer: number)
-        local totalElements = #Fusion.peek(self.CMDIntellisense) :: number
-        if totalElements <= 0 then totalElements = 1 end
-
-        nextPointer = math.clamp(nextPointer, 1, totalElements)
-
-        self.AutoCompletePointer:set(nextPointer)
-    end
-    local function _handleItemPointer(nextPointer: number)
-        local totalElements = #Fusion.peek(self.ItemIntellisense) :: number
-        if totalElements <= 0 then totalElements = 1 end
-
-        nextPointer = math.clamp(nextPointer, 1, totalElements)
-
-        self.ItemAutoCompletePointer:set(nextPointer)
-    end
     self.Add(UserInputService.InputBegan:Connect(function(input, gpe)
         if input.KeyCode == Enum.KeyCode.Quote then
             _handleOpen(gpe)
 
         elseif input.KeyCode == Enum.KeyCode.Return then
-            self.IsShown:set(false)
-
-            Events.ExecuteCommand.Fire({
-                Command = Fusion.peek(self.CMDInput)
-            })
-
-        elseif input.KeyCode == Enum.KeyCode.Down then
-            _handlePointer(Fusion.peek(self.AutoCompletePointer) + 1)
-
-        elseif input.KeyCode == Enum.KeyCode.Up then
-            _handlePointer(Fusion.peek(self.AutoCompletePointer) - 1)
-
-        elseif input.KeyCode == Enum.KeyCode.Right then
-            _handleItemPointer(Fusion.peek(self.ItemAutoCompletePointer) + 1)
-
-        elseif input.KeyCode == Enum.KeyCode.Left then
-            _handleItemPointer(Fusion.peek(self.ItemAutoCompletePointer) - 1)
-
-        elseif input.KeyCode == Enum.KeyCode.Tab then
-            self.AutoCompleteFunc()
+            self.ExecuteCommandFunc()
         end
     end))
 
@@ -281,14 +276,19 @@ function HarukaCMD:_ListenUITracker()
             for _, argVal: Fusion.Value in self.ExtraArgs do
                 argVal:set("")
             end
+            for _, argVal: Fusion.Value in self.ExtraArgsSearch do
+                argVal:set("")
+            end
         end
     end)
 
 
-    local cmdInputObserver = Fusion.Observer(self.scope, self.CMDInput)
+    local cmdInputObserver = Fusion.Observer(self.scope, self.CMDSearchInput)
     cmdInputObserver:onBind(function()
-        local input = Fusion.peek(self.CMDInput) :: string
+        local input = Fusion.peek(self.CMDSearchInput) :: string
         local realInput = string.gsub(input, " ", "")
+
+        if realInput == "" then realInput = "/" end
 
         local acceptedCmds = {}
         pcall(function()
@@ -299,7 +299,7 @@ function HarukaCMD:_ListenUITracker()
                 if inputLen > aliasLen then
                     inputCMD, aliasCMD = aliasCMD, inputCMD
                 end
-                if string.find(aliasCMD, inputCMD) then
+                if string.find(string.lower(aliasCMD), string.lower(inputCMD)) then
                     table.insert(acceptedCmds, cmd)
                 end
             end
@@ -333,6 +333,9 @@ function HarukaCMD:_ListenUITracker()
         for _, argVal: Fusion.Value in self.ExtraArgs do
             argVal:set("")
         end
+        for _, argVal: Fusion.Value in self.ExtraArgsSearch do
+            argVal:set("")
+        end
     end)
 
 
@@ -353,6 +356,9 @@ function HarukaCMD:_ListenUITracker()
         self.ItemIntellisense:set(curSuggested.Args)
 
         for _, argVal: Fusion.Value in self.ExtraArgs do
+            argVal:set("")
+        end
+        for _, argVal: Fusion.Value in self.ExtraArgsSearch do
             argVal:set("")
         end
     end)

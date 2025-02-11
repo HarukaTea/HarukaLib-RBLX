@@ -1,5 +1,6 @@
 --!nocheck
 
+local HttpService = game:GetService("HttpService")
 local RepS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local SSS = game:GetService("ServerScriptService")
@@ -68,10 +69,7 @@ function GlobalAttrsLib.new(uniqueId: string, serverOnlyProps: {
         self.AttrsObj = Events.GlobalAttrsLibRequest.Call(self.UniqueId)
 
         repeat wait() until self.AttrsObj
-
-
     end
-
 
     self.scope = Fusion.scoped()
     self.Add, self.Empty = HarukaLib.Bin()
@@ -97,6 +95,8 @@ end
 
 
 function GlobalAttrsLib:Destroy()
+    allGlobalAttrsObjPool[self.UniqueId] = nil
+
     Fusion.doCleanup(self.scope)
     self.Empty()
 
