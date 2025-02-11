@@ -29,6 +29,7 @@ return function (scope: Fusion.Scope, props: {
     return Components.HarukaScreenGui(scope, {
         Name = "HarukaCMD",
         DisplayOrder = 1000,
+        ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets,
         Parent = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui"),
 
         Enabled = Fusion.Computed(scope, function(use: Fusion.Use, _)
@@ -36,13 +37,13 @@ return function (scope: Fusion.Scope, props: {
         end)
 
     }, {
-        FullProps = {
+        BottomProps = {
             [Children] = {
                 Components.Frame(scope, {
                     Name = "Input",
-                    Size = UDim2.fromScale(1, 0.07),
                     Position = UDim2.fromScale(0.5, 1),
                     AnchorPoint = Vector2.new(0.5, 1),
+                    Size = UDim2.new(1, 0, 0, 26),
 
                     [Children] = {
                         Components.UIListLayout(scope, {
@@ -135,8 +136,8 @@ return function (scope: Fusion.Scope, props: {
                 }),
                 Components.Frame(scope, {
                     Name = "CMDIntellisense",
-                    Size = UDim2.new(1, 0, 0, 23),
-                    Position = UDim2.fromScale(0.5, 1 - 0.07 * 2),
+                    Size = UDim2.new(1, 0, 0, 26),
+                    Position = UDim2.new(0.5, 0, 0.8, -52),
                     AnchorPoint = Vector2.new(0.5, 1),
 
                     [Children] = {

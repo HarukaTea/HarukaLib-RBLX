@@ -267,7 +267,8 @@ function HarukaCMD:_ListenUITracker()
     local cmdOpenObserver = Fusion.Observer(self.scope, self.IsShown)
     cmdOpenObserver:onBind(function()
         if Fusion.peek(self.IsShown) then
-            self.CMDInput:set("/")
+            --self.CMDInput:set("/")
+            self.CMDSearchInput:set("/")
 
             if GuiService.MenuIsOpen then
                 self.IsShown:set(false) --- special case for roblox menu bugs (rarely)
