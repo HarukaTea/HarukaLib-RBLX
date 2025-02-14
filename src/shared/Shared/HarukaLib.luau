@@ -356,6 +356,19 @@ function HarukaLib:Tween(object: Instance, style: TweenInfo, goal: table)
 			return a:Lerp(b, t)
 		end
 	}
+	local function fastBubbleSort(arr)
+		local n = #arr
+		while n > 1 do
+			local newN = 0
+			for i = 1, n - 1 do
+				if arr[i].Time > arr[i + 1].Time then
+					arr[i], arr[i + 1] = arr[i + 1], arr[i]
+					newN = i
+				end
+			end
+			n = newN
+		end
+	end
 	dataTypes.NumberSequence = function(a, b, t)
 		local keyPoints = {}
 
@@ -363,11 +376,12 @@ function HarukaLib:Tween(object: Instance, style: TweenInfo, goal: table)
 			local nextKeypoint = b.Keypoints[index] :: NumberSequenceKeypoint
 
 			table.insert(keyPoints, NumberSequenceKeypoint.new(
-				dataTypes.number(keypoint.Time, nextKeypoint.Time, t),
+				math.clamp(dataTypes.number(keypoint.Time, nextKeypoint.Time, t), 0, 1),
 				dataTypes.number(keypoint.Value, nextKeypoint.Value, t),
 				dataTypes.number(keypoint.Envelope, nextKeypoint.Envelope, t)
 			))
 		end
+		fastBubbleSort(keyPoints)
 
 		return NumberSequence.new(keyPoints)
 	end
@@ -378,10 +392,12 @@ function HarukaLib:Tween(object: Instance, style: TweenInfo, goal: table)
 			local nextKeypoint = b.Keypoints[index] :: ColorSequenceKeypoint
 
 			table.insert(keyPoints, ColorSequenceKeypoint.new(
-				dataTypes.number(keypoint.Time, nextKeypoint.Time, t),
+				math.clamp(dataTypes.number(keypoint.Time, nextKeypoint.Time, t), 0, 1),
 				dataTypes.V3(keypoint.Value, nextKeypoint.Value, math.clamp(t, 0, 1))
 			))
 		end
+		fastBubbleSort(keyPoints)
+
 
 		return ColorSequence.new(keyPoints)
 	end
