@@ -689,17 +689,41 @@ end
 --[[
 	Helper function to tween the transparency of a UI element
 ]]
-function HarukaLib:UITween(ui: GuiObject, method: string, properties: {
+function HarukaLib:UITween(ui: GuiObject, style: "In" | "Out", props: {
 	DelayTime: number?,
-	ForceGoal: number?,
-	TweenTime: number?
+	TweenTime: number?,
+
+	SetOriPropsWhenOut: boolean?,
+	FollowOriPropsWhenIn: boolean?,
+	TweenCallback: (clonedTweenOutUI: GuiObject) -> nil?,
+
+	PosTweenStyle: "FromB2T" | "FromT2B" | "FromL2R" | "FromR2L"?,
+	PosTweenBaseElement: GuiObject?,
+	PosTweenOffset: number?
 }?)
-	properties = properties or {}
+	props = props or {}
 
-	local delaySec = properties.DelayTime or 0
-	local forceGoal = properties.ForceGoal or nil
-	local tweenTime = TweenInfo.new(properties.TweenTime or 0.2)
 
+	if props.TweenCallback and style == "Out" then
+		local clonedTweenOutUI = ui:Clone()
+		clonedTweenOutUI.Parent = ui.Parent
+		Debris:AddItem(clonedTweenOutUI, 1)
+
+		ui = clonedTweenOutUI
+
+		Promise.try(props.TweenCallback, clonedTweenOutUI)
+
+	elseif props.TweenCallback and style == "In" then
+		Promise.try(props.TweenCallback, ui)
+	end
+
+	props.DelayTime = props.DelayTime or 0
+	props.TweenTime = props.TweenTime or 0.2
+
+	local tweenInfo = TweenInfo.new(props.TweenTime,
+		Enum.EasingStyle.Sine,
+		Enum.EasingDirection.Out
+	)
 	local transparencyProperties = {
 		"BackgroundTransparency",
 		"TextTransparency",
@@ -714,17 +738,30 @@ function HarukaLib:UITween(ui: GuiObject, method: string, properties: {
 
 	local function _tweenGoal(obj: GuiObject, attr: string, tweenProps: table)
 		if not obj then return end
+		if not obj.Parent then return end
+
 		if attr == "Transparency" and not obj:IsA("UIStroke") then return end
 
 		pcall(function()
-			local original = obj[attr]
+			local original = obj[attr] :: number?
+			local attrOriginal = obj:GetAttribute("HarukaUITween_Ori_"..attr) :: number?
 
-			if method == "In" then
+			if style == "In" then
 				obj[attr] = 1
-				if original ~= 1 then tweenProps[attr] = forceGoal or original end
 
-			elseif method == "Out" then
-				if obj[attr] then tweenProps[attr] = 1 end
+				if original ~= 1 then tweenProps[attr] = original end
+				if props.FollowOriPropsWhenIn and attrOriginal and attrOriginal ~= 1 then
+					tweenProps[attr] = attrOriginal
+				end
+
+			elseif style == "Out" then
+				if obj[attr] then
+					tweenProps[attr] = 1
+
+					if props.SetOriPropsWhenOut and obj:GetAttribute("HarukaUITween_Ori_"..attr) == nil then
+						obj:SetAttribute("HarukaUITween_Ori_"..attr, original)
+					end
+				end
 			end
 		end)
 		pcall(function()
@@ -735,23 +772,69 @@ function HarukaLib:UITween(ui: GuiObject, method: string, properties: {
 		if not obj then return end
 		if not obj.Parent then return end
 
-		TweenService:Create(obj, tweenTime, tweenProps):Play()
-
+		pcall(function()
+			TweenService:Create(obj, tweenInfo, tweenProps):Play()
+		end)
 		pcall(function()
 			obj.Interactable = true
 		end)
 	end
 
-	for _, obj in tweenObjs do
+
+	for _, obj: Instance in tweenObjs do
 		local tweenProps = {}
-		for _, attr in transparencyProperties do
+		for _, attr: string in transparencyProperties do
 			_tweenGoal(obj, attr, tweenProps)
 		end
 
-		if delaySec > 0 then
-			Promise.delay(delaySec):andThenCall(_startTween, obj, tweenProps)
+		if props.DelayTime > 0 then
+			Promise.delay(props.DelayTime):andThenCall(_startTween, obj, tweenProps)
 		else
 			_startTween(obj, tweenProps)
+		end
+	end
+
+	if props.PosTweenStyle and props.PosTweenBaseElement then
+		local nowPos = props.PosTweenBaseElement.Position
+		local goalPos = nowPos
+
+		local offset = props.PosTweenOffset or 15.99 / 2
+		local fixFactor = if style == "In" then 1 else -1
+
+		if props.PosTweenStyle == "FromB2T" then
+			goalPos = UDim2.new(nowPos.X.Scale, nowPos.X.Offset, nowPos.Y.Scale, nowPos.Y.Offset + offset * fixFactor)
+
+		elseif props.PosTweenStyle == "FromT2B" then
+			goalPos = UDim2.new(nowPos.X.Scale, nowPos.X.Offset, nowPos.Y.Scale, nowPos.Y.Offset - offset * fixFactor)
+
+		elseif props.PosTweenStyle == "FromL2R" then
+			goalPos = UDim2.new(nowPos.X.Scale, nowPos.X.Offset - offset * fixFactor, nowPos.Y.Scale, nowPos.Y.Offset)
+
+		elseif props.PosTweenStyle == "FromR2L" then
+			goalPos = UDim2.new(nowPos.X.Scale, nowPos.X.Offset + offset * fixFactor, nowPos.Y.Scale, nowPos.Y.Offset)
+		end
+
+		if style == "Out" then
+			goalPos, nowPos = nowPos, goalPos
+		end
+
+		local function _tweenPosition()
+			props.PosTweenBaseElement.Position = goalPos
+
+			local tween = TweenService:Create(props.PosTweenBaseElement, tweenInfo, {
+				Position = nowPos
+			})
+			tween:Play()
+			tween.Completed:Wait()
+			tween:Destroy()
+
+			props.PosTweenBaseElement.Position = if style == "In" then nowPos else goalPos
+		end
+
+		if props.DelayTime > 0 then
+			Promise.delay(props.DelayTime):andThenCall(_tweenPosition)
+		else
+			_tweenPosition()
 		end
 	end
 end
@@ -898,21 +981,6 @@ function HarukaLib.CreatePartPool(obj: Instance, initialAmount: number?, contain
 	end
 
 	return pool
-end
-
-
---[[
-	A helper function to quickly tween out an existing UI
-]]
-function HarukaLib:TweenOutUI(ui: GuiObject, callback: (tweenOutUI: GuiObject) -> nil)
-	local tweenOutUI = ui:Clone()
-    tweenOutUI.Parent = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
-
-    Debris:AddItem(tweenOutUI, 1)
-
-	if callback then callback(tweenOutUI) end
-
-    HarukaLib:UITween(tweenOutUI, "Out")
 end
 
 

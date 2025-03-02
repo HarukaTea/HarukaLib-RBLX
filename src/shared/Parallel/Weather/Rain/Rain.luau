@@ -41,10 +41,9 @@ local function _adjustRain(rainLevel: number)
 
 
 	--// Adjust the volume of the rain sound
-	rainSound.Volume = math.clamp(rainLevel * 0.15 + 1, 0, 1.15)
-	if rainLevel == 0 then
-		TS:Create(rainSound, TweenInfo.new(3) , { Volume = 0 }):Play()
-	end
+	TS:Create(rainSound, TweenInfo.new(0.5), {
+		Volume = math.clamp(rainLevel * 0.25, 0, 1.15)
+	}):Play()
 end
 
 --// Listeners

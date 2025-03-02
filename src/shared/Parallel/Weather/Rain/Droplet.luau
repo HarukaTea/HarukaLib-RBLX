@@ -1,6 +1,5 @@
 --!nocheck
 
-local Players = game:GetService("Players")
 local RepS = game:GetService("ReplicatedStorage")
 local RS = game:GetService("RunService")
 
@@ -21,11 +20,8 @@ local EMPTY_VEC = Vector3.new(0, 0, 0)
 --// Variables
 
 local camera = workspace.CurrentCamera
-local plr = Players.LocalPlayer
 local gameSettings = UserSettings().GameSettings
 local glassGraphics = gameSettings.SavedQualityLevel.Value >= 8
-
-local ignoreList, ignoreLength = {}, 0
 
 local screenDroplets = Instance.new("Folder")
 screenDroplets.Name = "ScreenDroplets"
@@ -60,26 +56,6 @@ dropletPool = HarukaLib.CreatePartPool(dropletPrefab, (DEFAULT.Rate * DEFAULT.Fa
 
 --// Helper functions
 
-local function _addToIgnoreList(obj: Instance?)
-	if obj then
-		local index = ignoreLength + 1
-		ignoreLength += 1
-		ignoreList[index] = obj
-
-		local connection
-		connection = obj.AncestryChanged:Connect(function()
-			if obj:IsDescendantOf(game) then
-				return
-			end
-			connection:Disconnect()
-
-			-- Perform a fast unordered table removal
-			ignoreList[index] = ignoreList[ignoreLength]
-			ignoreList[ignoreLength] = nil
-			ignoreLength -= 1
-		end)
-	end
-end
 local function _moveDroplets()
 	cameraCF = workspace.CurrentCamera.CFrame
 
@@ -155,14 +131,7 @@ HarukaLib:Hydrate(gameSettings, {
 		glassGraphics = gameSettings.SavedQualityLevel.Value >= 8 or gameSettings.SavedQualityLevel.Value == 0
 	end
 })
-plr.CharacterAdded:Connect(_addToIgnoreList)
 RS.RenderStepped:Connect(_moveDroplets)
-
-
---// Init
-
-_addToIgnoreList(plr.Character)
-_addToIgnoreList(screenDroplets)
 
 
 --// Modules Main

@@ -463,7 +463,31 @@ function HarukaCMD:_ValidateCmd(realCMD: table, cmdArgs: { string }) : (boolean,
                 break
             end
 
-            realCMDArgs[index] = tonumber(arg)
+            local val = tonumber(arg)
+            if args[index].ShouldBeInteger then
+                if not HarukaLib:TypeCheck("Integer", val) then
+                    check = false
+                    break
+                end
+            end
+            if args[index].RangeMin then
+                if not HarukaLib:TypeCheck("Min", val, { Min = args[index].RangeMin }) then
+                    check = false
+                    break
+                end
+            end
+            if args[index].RangeMax then
+                if not HarukaLib:TypeCheck("Max", val, { Max = args[index].RangeMax }) then
+                    check = false
+                    break
+                end
+            end
+            if val ~= val then
+                check = false
+                break
+            end
+
+            realCMDArgs[index] = val
 
         elseif argType == "player" then
             local hasPlayer = false

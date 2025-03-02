@@ -58,7 +58,6 @@ return function (scope: Fusion.Scope, props: {
                             AutoLocalize = false,
                             RichText = true,
                             LayoutOrder = 2,
-                            Size = UDim2.fromScale(1, 0.8),
                             TextXAlignment = Enum.TextXAlignment.Left,
                             BackgroundTransparency = 0,
 
@@ -111,7 +110,6 @@ return function (scope: Fusion.Scope, props: {
                             AutoLocalize = false,
                             RichText = true,
                             LayoutOrder = 1,
-                            Size = UDim2.fromScale(1, 0.8),
                             TextXAlignment = Enum.TextXAlignment.Left,
                             BackgroundTransparency = 0,
                             PlaceholderText = "Search Commands Here",
@@ -147,8 +145,8 @@ return function (scope: Fusion.Scope, props: {
                         }),
 
 
-                        Fusion.ForPairs(scope, props.Intellisense, function(_, localScope: Fusion.Scope, index: number, cmd: table)
-                            return index, Components.TextButton(localScope, {
+                        Fusion.ForPairs(scope, props.Intellisense, function(_, scope: Fusion.Scope, index: number, cmd: table)
+                            return index, Components.TextButton(scope, {
                                 Name = cmd.Name,
                                 AutoLocalize = false,
                                 AutoButtonColor = false,
@@ -156,14 +154,14 @@ return function (scope: Fusion.Scope, props: {
                                 BackgroundTransparency = 0,
                                 LayoutOrder = index + 1,
 
-                                BackgroundColor3 = Fusion.Computed(localScope, function(use: Fusion.Use, _)
+                                BackgroundColor3 = Fusion.Computed(scope, function(use: Fusion.Use, _)
                                     return if use(props.IntellisensePointer) == index then Color3.fromRGB(236, 229, 216) else Color3.fromRGB(28, 28, 37)
                                 end),
-                                TextColor3 = Fusion.Computed(localScope, function(use: Fusion.Use, _)
+                                TextColor3 = Fusion.Computed(scope, function(use: Fusion.Use, _)
                                     return if use(props.IntellisensePointer) == index then Color3.new() else Color3.fromRGB(236, 229, 216)
                                 end),
 
-                                Text = Fusion.Computed(localScope, function()
+                                Text = Fusion.Computed(scope, function()
                                     local alias = cmd.Alias
                                     local totalArgs = ""
                                     for _, arg in cmd.Args do
@@ -181,7 +179,7 @@ return function (scope: Fusion.Scope, props: {
                                 end,
 
                                 [Children] = {
-                                    Components.UIPadding(localScope, {
+                                    Components.UIPadding(scope, {
                                         PaddingTop = UDim.new(0.15, 0),
                                         PaddingLeft = UDim.new(0.01, 0),
                                         PaddingRight = UDim.new(0.01, 0),
@@ -212,16 +210,16 @@ return function (scope: Fusion.Scope, props: {
 
                                 Components.PaddingFrame(scope, "AAA"),
 
-                                Fusion.ForPairs(scope, props.ItemIntellisense, function(_, localScope: Fusion.Scope, index: number, arg: table)
+                                Fusion.ForPairs(scope, props.ItemIntellisense, function(_, scope: Fusion.Scope, index: number, arg: table)
                                     local argType = arg.Type :: string
 
-                                    local intellisenseItems = Fusion.Value(localScope, {})
+                                    local intellisenseItems = Fusion.Value(scope, {})
                                     local extraArgSearchVal = props.ExtraArgsSearch[index]
 
                                     if argType == "enum" then
                                         intellisenseItems:set(arg.EnumItems)
 
-                                        local searchObserver = Fusion.Observer(localScope, extraArgSearchVal)
+                                        local searchObserver = Fusion.Observer(scope, extraArgSearchVal)
                                         searchObserver:onBind(function()
                                             local searchText = Fusion.peek(extraArgSearchVal) :: string
                                             local realSearch = string.gsub(searchText, " ", "")
@@ -257,11 +255,11 @@ return function (scope: Fusion.Scope, props: {
                                             intellisenseItems:set(players)
                                         end
                                         __getPlayers()
-                                        table.insert(localScope, CollectionService:GetInstanceAddedSignal("PlayerEntity"):Connect(__getPlayers))
-                                        table.insert(localScope, CollectionService:GetInstanceRemovedSignal("PlayerEntity"):Connect(__getPlayers))
+                                        table.insert(scope, CollectionService:GetInstanceAddedSignal("PlayerEntity"):Connect(__getPlayers))
+                                        table.insert(scope, CollectionService:GetInstanceRemovedSignal("PlayerEntity"):Connect(__getPlayers))
 
 
-                                        local searchObserver = Fusion.Observer(localScope, extraArgSearchVal)
+                                        local searchObserver = Fusion.Observer(scope, extraArgSearchVal)
                                         searchObserver:onBind(function()
                                             local searchText = Fusion.peek(extraArgSearchVal) :: string
                                             local realSearch = string.gsub(searchText, " ", "")
@@ -288,7 +286,7 @@ return function (scope: Fusion.Scope, props: {
                                     else
                                         local extraArgVal = props.ExtraArgs[index]
 
-                                        return index, Components.TextBox(localScope, {
+                                        return index, Components.TextBox(scope, {
                                             Name = arg.Name,
                                             LayoutOrder = index,
                                             Size = UDim2.fromScale(0.23, 1),
@@ -302,7 +300,7 @@ return function (scope: Fusion.Scope, props: {
                                             PlaceholderColor3 = Color3.fromRGB(159, 159, 159),
 
                                             [Children] = {
-                                                Components.UIPadding(localScope, {
+                                                Components.UIPadding(scope, {
                                                     PaddingTop = UDim.new(0.15, 0),
                                                     PaddingLeft = UDim.new(0.03, 0),
                                                     PaddingRight = UDim.new(0.03, 0),
@@ -312,22 +310,22 @@ return function (scope: Fusion.Scope, props: {
                                         })
                                     end
 
-                                    local pointer = Fusion.Value(localScope, 1)
+                                    local pointer = Fusion.Value(scope, 1)
 
-                                    return index, Components.Frame(localScope, {
+                                    return index, Components.Frame(scope, {
                                         Name = arg.Name,
                                         LayoutOrder = index,
                                         Size = UDim2.fromScale(0.23, 1),
 
                                         [Children] = {
-                                            Components.UIListLayout(localScope, {
+                                            Components.UIListLayout(scope, {
                                                 VerticalAlignment = Enum.VerticalAlignment.Bottom,
                                                 HorizontalAlignment = Enum.HorizontalAlignment.Center,
                                             }),
 
 
-                                            Fusion.ForPairs(localScope, intellisenseItems, function(_, llScope: Fusion.Scope, iindex: number, option: string)
-                                                return iindex, Components.TextButton(llScope, {
+                                            Fusion.ForPairs(scope, intellisenseItems, function(_, scope: Fusion.Scope, iindex: number, option: string)
+                                                return iindex, Components.TextButton(scope, {
                                                     Name = option,
                                                     AutoLocalize = false,
                                                     AutoButtonColor = false,
@@ -335,10 +333,10 @@ return function (scope: Fusion.Scope, props: {
                                                     BackgroundTransparency = 0,
                                                     LayoutOrder = iindex + 1,
 
-                                                    BackgroundColor3 = Fusion.Computed(llScope, function(use: Fusion.Use, _)
+                                                    BackgroundColor3 = Fusion.Computed(scope, function(use: Fusion.Use, _)
                                                         return if use(props.ItemIntellisensePointer) == index and use(pointer) == iindex then Color3.fromRGB(236, 229, 216) else Color3.fromRGB(28, 28, 37)
                                                     end),
-                                                    TextColor3 = Fusion.Computed(llScope, function(use: Fusion.Use, _)
+                                                    TextColor3 = Fusion.Computed(scope, function(use: Fusion.Use, _)
                                                         return if use(props.ItemIntellisensePointer) == index and use(pointer) == iindex then Color3.new() else Color3.fromRGB(236, 229, 216)
                                                     end),
 
@@ -356,7 +354,7 @@ return function (scope: Fusion.Scope, props: {
                                                     end,
 
                                                     [Children] = {
-                                                        Components.UIPadding(llScope, {
+                                                        Components.UIPadding(scope, {
                                                             PaddingTop = UDim.new(0.15, 0),
                                                             PaddingLeft = UDim.new(0.03, 0),
                                                             PaddingRight = UDim.new(0.03, 0),
@@ -366,7 +364,7 @@ return function (scope: Fusion.Scope, props: {
                                                 })
                                             end),
 
-                                            Components.TextBox(localScope, {
+                                            Components.TextBox(scope, {
                                                 Name = arg.Name,
                                                 LayoutOrder = 999,
                                                 TextXAlignment = Enum.TextXAlignment.Left,
@@ -379,7 +377,7 @@ return function (scope: Fusion.Scope, props: {
                                                 PlaceholderColor3 = Color3.fromRGB(159, 159, 159),
 
                                                 [Children] = {
-                                                    Components.UIPadding(localScope, {
+                                                    Components.UIPadding(scope, {
                                                         PaddingTop = UDim.new(0.15, 0),
                                                         PaddingLeft = UDim.new(0.03, 0),
                                                         PaddingRight = UDim.new(0.03, 0),
