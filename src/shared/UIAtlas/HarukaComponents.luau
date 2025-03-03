@@ -1,8 +1,12 @@
 --!nocheck
 
+local HttpService = game:GetService("HttpService")
 local RepS = game:GetService("ReplicatedStorage")
 
+local Bindables = require(RepS.HarukaShared.Library.Bindables)
 local Fusion = require(RepS.HarukaShared.Shared.Fusion)
+local Signal = require(RepS.HarukaShared.Shared.Signal)
+local HarukaLib = require(RepS.HarukaShared.Shared.HarukaLib)
 
 local HarukaComponents = {}
 
@@ -17,8 +21,83 @@ local BLACK_COLOR = fromRGB(28, 28, 37)
 HarukaComponents.BLACK_COLOR = BLACK_COLOR
 HarukaComponents.WHITE_COLOR = WHITE_COLOR
 
+--// Init once only
+local existingButtonElements = {}
+
+local wait = task.wait
+
 --// Helper functions
 
+local function _trackMouseEnterLeaveEvents(scope: Fusion.Scope, button: GuiObject, hoverFunc: () -> nil, leaveFunc: () -> nil, clickFunc: () -> nil)
+
+	local function _isButtonValid(screenGui: ScreenGui?) : boolean
+		if not screenGui then return false end
+		if not button.Visible then return false end
+
+		return true
+	end
+
+	--local mouseEnter = Signal.new()
+	local mouseLeave = Signal.new()
+	local screenGui = button:FindFirstAncestorOfClass("ScreenGui")
+
+	existingButtonElements[button:GetAttribute("HarukaUniqueId")] = {
+		--MouseEnter = mouseEnter,
+		MouseLeave = mouseLeave,
+		UIObj = button,
+		ScreenGuiObj = screenGui,
+	}
+
+	table.insert(scope, task.spawn(function()
+		repeat wait() until button:FindFirstAncestorOfClass("ScreenGui")
+
+		screenGui = button:FindFirstAncestorOfClass("ScreenGui")
+		existingButtonElements[button:GetAttribute("HarukaUniqueId")].ScreenGuiObj = screenGui
+
+		table.insert(scope, HarukaLib:Hydrate(screenGui, {
+			["Prop-Enabled"] = function(state: boolean)
+				if state == false then
+					mouseLeave:Fire()
+				end
+			end
+		}))
+	end))
+
+
+	mouseLeave:Connect(function()
+		if not _isButtonValid(screenGui) then return end
+
+		if leaveFunc then leaveFunc() end
+	end)
+	button.MouseEnter:Connect(function()
+		if not _isButtonValid(screenGui) then return end
+		if hoverFunc then hoverFunc() end
+
+		for _, element: table in existingButtonElements do
+			local thatButton = element.UIObj :: GuiObject
+			if thatButton == button then continue end
+
+			local thatScreenGui = element.ScreenGuiObj :: ScreenGui?
+			if not thatScreenGui then continue end
+
+			if thatScreenGui == screenGui then
+				element.MouseLeave:Fire()
+			end
+		end
+	end)
+	button.MouseLeave:Connect(function()
+		if not _isButtonValid(screenGui) then return end
+
+		if leaveFunc then leaveFunc() end
+	end)
+	button.MouseButton1Click:Connect(function()
+		if not screenGui or not screenGui.Enabled then return false end
+		if not button.Visible then return false end
+
+
+		if clickFunc then clickFunc() end
+	end)
+end
 local function _reconcileProps(default: table, props: table)
 	for prop: string, val: any in props do
 		if prop == Fusion.Children and default[Fusion.Children] then
@@ -222,7 +301,17 @@ end
 	Return a clickable empty transparent `ImageButton`, but with center anchor and full size
 ]]
 function HarukaComponents.HoverImageButton(scope: Fusion.Scope, props: table) : ImageButton
-	return _createNewCompoent(scope, props, "ImageButton", {
+	local hoverFunc, leaveFunc, clickFunc =
+		props[Fusion.OnEvent("MouseEnter")], props[Fusion.OnEvent("MouseLeave")], props[Fusion.OnEvent("MouseButton1Click")]
+
+
+	props[Fusion.OnEvent("MouseButton1Click")] = nil
+	props[Fusion.OnEvent("MouseEnter")] = nil
+	props[Fusion.OnEvent("MouseLeave")] = nil
+
+
+	local uniqueId = HttpService:GenerateGUID(false)
+	local button = _createNewCompoent(scope, props, "ImageButton", {
 		Name = "Hover",
 		BackgroundColor3 = color3New(),
 		BackgroundTransparency = 1,
@@ -231,15 +320,35 @@ function HarukaComponents.HoverImageButton(scope: Fusion.Scope, props: table) : 
 		Size = fromScale(1, 1),
 		Image = "",
 		BorderSizePixel = 0,
-		AutoButtonColor = false
+		AutoButtonColor = false,
+
+		[Fusion.Attribute("HarukaUniqueId")] = uniqueId
 	})
+
+	_trackMouseEnterLeaveEvents(scope, button, hoverFunc, leaveFunc, clickFunc)
+
+	table.insert(scope, existingButtonElements[uniqueId])
+	table.insert(scope, function()
+		existingButtonElements[uniqueId] = nil
+	end)
+
+	return button
 end
 
 --[[
 	Return a clickable `TextButton`, with SourceSansPro bold font, and black background
 ]]
 function HarukaComponents.TextButton(scope: Fusion.Scope, props: table) : TextButton
-	return _createNewCompoent(scope, props, "TextButton", {
+	local hoverFunc, leaveFunc, clickFunc =
+		props[Fusion.OnEvent("MouseEnter")], props[Fusion.OnEvent("MouseLeave")], props[Fusion.OnEvent("MouseButton1Click")]
+
+
+	props[Fusion.OnEvent("MouseButton1Click")] = nil
+	props[Fusion.OnEvent("MouseEnter")] = nil
+	props[Fusion.OnEvent("MouseLeave")] = nil
+
+	local uniqueId = HttpService:GenerateGUID(false)
+	local button = _createNewCompoent(scope, props, "TextButton", {
 		AutoButtonColor = true,
 		BackgroundColor3 = BLACK_COLOR,
 		FontFace = Font.fromName("SourceSansPro", Enum.FontWeight.Bold),
@@ -249,7 +358,18 @@ function HarukaComponents.TextButton(scope: Fusion.Scope, props: table) : TextBu
 		TextStrokeColor3 = BLACK_COLOR,
 		TextStrokeTransparency = 1,
 		Size = fromScale(1, 1),
+
+		[Fusion.Attribute("HarukaUniqueId")] = uniqueId
 	})
+
+	_trackMouseEnterLeaveEvents(scope, button, hoverFunc, leaveFunc, clickFunc)
+
+	table.insert(scope, existingButtonElements[uniqueId])
+	table.insert(scope, function()
+		existingButtonElements[uniqueId] = nil
+	end)
+
+	return button
 end
 
 --[[
@@ -388,5 +508,50 @@ function HarukaComponents.ViewportFrame(scope: Fusion.Scope, props: table) : Vie
 		BackgroundTransparency = 1,
 	})
 end
+
+
+--[[
+	Create a confirm prompt temporary UI
+]]
+function HarukaComponents:CreateConfirmPrompt(data: {
+	Hint: string,
+	ConfirmText: string,
+	CancelText: string,
+
+	ConfirmUniqueId: stringcon
+})
+	local scope = {}
+	local waitSignal = Signal.new()
+	table.insert(scope, waitSignal)
+
+	table.insert(scope, Bindables.ConfirmPromptChosen:Connect(function(uniqueId: string, result: "YES" | "NO")
+		if uniqueId ~= data.ConfirmUniqueId then return end
+
+		waitSignal:Fire(result)
+
+		Fusion.doCleanup(scope)
+	end))
+
+	Bindables.CreateConfirmPrompt:Fire(data)
+
+	return waitSignal
+end
+
+
+--[[
+	For internal use only
+]]
+function HarukaComponents:_GetAllExistingButtonElements() : {
+	[string]: {
+		MouseLeave: RBXScriptSignal,
+		UIObj: GuiObject,
+		ScreenGuiObj: ScreenGui,
+	}
+}
+	return existingButtonElements
+end
+
+
+
 
 return table.freeze(HarukaComponents)

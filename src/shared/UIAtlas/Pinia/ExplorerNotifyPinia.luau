@@ -75,7 +75,7 @@ return function (self: table)
 		local fullNotify = FullNotify(scope, {
 			Text = nextHint.Text,
 		})
-		Debris:AddItem(fullNotify, nextHint.Duration + 3)
+		Debris:AddItem(fullNotify, nextHint.Duration + 1)
 
 
 		HarukaLib:UITween(fullNotify, "In", { TweenTime = 0.5 })
@@ -85,9 +85,9 @@ return function (self: table)
 		do
 			self.fsHintsQueue:SetBusyState(false)
 
-			if self.fsHintsQueue:IsEmpty() then
-				HarukaLib:UITween(fullNotify, "Out")
-			else
+			HarukaLib:UITween(fullNotify, "Out")
+
+			if not self.fsHintsQueue:IsEmpty() then
 				_onFSHintAdded()
 			end
 		end
@@ -176,6 +176,8 @@ return function (self: table)
 		HarukaLib:UITween(UI, "Out", {
 			TweenCallback = function(tweenOutUI: GuiObject)
 				Fusion.doCleanup(confirmScope)
+
+				tweenOutUI.Full:Destroy()
 
 				HarukaLib:UITween(tweenOutUI, "Out", {
 					PosTweenStyle = "FromT2B",

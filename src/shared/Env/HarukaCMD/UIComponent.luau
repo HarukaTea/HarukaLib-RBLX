@@ -65,10 +65,10 @@ return function (scope: Fusion.Scope, props: {
 
 
                             BackgroundColor3 = Fusion.Computed(scope, function(use: Fusion.Use, _)
-                                return if use(isSelectingCMD) then Color3.fromRGB(236, 229, 216) else Color3.fromRGB(28, 28, 37)
+                                return if use(isSelectingCMD) then Components.WHITE_COLOR else Components.BLACK_COLOR
                             end),
                             TextColor3 = Fusion.Computed(scope, function(use: Fusion.Use, _)
-                                return if use(isSelectingCMD) then Color3.new() else Color3.fromRGB(236, 229, 216)
+                                return if use(isSelectingCMD) then Color3.new() else Components.WHITE_COLOR
                             end),
                             Text = Fusion.Computed(scope, function(use: Fusion.Use, _)
                                 local text = use(props.CMDInput) :: string
@@ -155,10 +155,10 @@ return function (scope: Fusion.Scope, props: {
                                 LayoutOrder = index + 1,
 
                                 BackgroundColor3 = Fusion.Computed(scope, function(use: Fusion.Use, _)
-                                    return if use(props.IntellisensePointer) == index then Color3.fromRGB(236, 229, 216) else Color3.fromRGB(28, 28, 37)
+                                    return if use(props.IntellisensePointer) == index then Components.WHITE_COLOR else Components.BLACK_COLOR
                                 end),
                                 TextColor3 = Fusion.Computed(scope, function(use: Fusion.Use, _)
-                                    return if use(props.IntellisensePointer) == index then Color3.new() else Color3.fromRGB(236, 229, 216)
+                                    return if use(props.IntellisensePointer) == index then Color3.new() else Components.WHITE_COLOR
                                 end),
 
                                 Text = Fusion.Computed(scope, function()
@@ -334,10 +334,10 @@ return function (scope: Fusion.Scope, props: {
                                                     LayoutOrder = iindex + 1,
 
                                                     BackgroundColor3 = Fusion.Computed(scope, function(use: Fusion.Use, _)
-                                                        return if use(props.ItemIntellisensePointer) == index and use(pointer) == iindex then Color3.fromRGB(236, 229, 216) else Color3.fromRGB(28, 28, 37)
+                                                        return if use(props.ItemIntellisensePointer) == index and use(pointer) == iindex then Components.WHITE_COLOR else Components.BLACK_COLOR
                                                     end),
                                                     TextColor3 = Fusion.Computed(scope, function(use: Fusion.Use, _)
-                                                        return if use(props.ItemIntellisensePointer) == index and use(pointer) == iindex then Color3.new() else Color3.fromRGB(236, 229, 216)
+                                                        return if use(props.ItemIntellisensePointer) == index and use(pointer) == iindex then Color3.new() else Components.WHITE_COLOR
                                                     end),
 
                                                     Text = option,

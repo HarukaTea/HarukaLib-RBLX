@@ -2,7 +2,7 @@
 
 local RepS = game:GetService("ReplicatedStorage")
 
-local UIAtlas = require(RepS.HarukaShared.UIAtlas.HarukaComponents)
+local Components = require(RepS.HarukaShared.UIAtlas.HarukaComponents)
 local Fusion = require(RepS.HarukaShared.Shared.Fusion)
 
 local Children = Fusion.Children
@@ -16,7 +16,7 @@ return function(scope: Fusion.Scope, props: {
     ButtonClickFunc: () -> nil,
     ButtonType: "Confirm" | "Cancel"
 })
-    local isSelected = Fusion.Value(scope, false)
+    local isSelecting = Fusion.Value(scope, false)
 
 
     props.AnchorPoint = props.AnchorPoint or Vector2.new()
@@ -28,10 +28,10 @@ return function(scope: Fusion.Scope, props: {
     props.ButtonClickFunc = props.ButtonClickFunc or function () end
 
 
-	return UIAtlas.TextButton(scope, {
+	return Components.TextButton(scope, {
         Name = "ExecuteButton",
         AutoButtonColor = false,
-        BackgroundColor3 = Color3.fromRGB(236, 229, 216),
+        BackgroundColor3 = Components.WHITE_COLOR,
 
         AnchorPoint = props.AnchorPoint,
         LayoutOrder = props.LayoutOrder,
@@ -39,31 +39,31 @@ return function(scope: Fusion.Scope, props: {
         Size = props.Size,
 
         [Fusion.OnEvent("MouseEnter")] = function()
-            isSelected:set(true)
+            isSelecting:set(true)
         end,
         [Fusion.OnEvent("MouseLeave")] = function()
-            isSelected:set(false)
+            isSelecting:set(false)
         end,
         [Fusion.OnEvent("MouseButton1Click")] = props.ButtonClickFunc,
 
         [Children] = {
-            UIAtlas.RoundUICorner(scope),
-            UIAtlas.UIStroke(scope, {
+            Components.RoundUICorner(scope),
+            Components.UIStroke(scope, {
                 Thickness = 2.5,
 
                 Transparency = Fusion.Tween(scope, Fusion.Computed(scope, function(use: Fusion.Use, _)
-                    return if use(isSelected) then 0 else 1
+                    return if use(isSelecting) then 0 else 1
                 end), TweenInfo.new(0.2))
             }),
 
-            UIAtlas.UIListLayout(scope, {
+            Components.UIListLayout(scope, {
                 FillDirection = Enum.FillDirection.Horizontal,
                 Padding = UDim.new(0.05, 0),
                 VerticalAlignment = Enum.VerticalAlignment.Center,
             }),
-            UIAtlas.UIPadding(scope, {}),
+            Components.UIPadding(scope, {}),
 
-            UIAtlas.Frame(scope, {
+            Components.Frame(scope, {
                 Name = "Icon",
                 LayoutOrder = 1,
 
@@ -73,8 +73,8 @@ return function(scope: Fusion.Scope, props: {
                 BackgroundTransparency = 0,
 
                 [Children] = {
-                    UIAtlas.RoundUICorner(scope),
-                    UIAtlas.ImageLabel(scope, {
+                    Components.RoundUICorner(scope),
+                    Components.ImageLabel(scope, {
                         SizeConstraint = Enum.SizeConstraint.RelativeYY,
 
                         Position = Fusion.Computed(scope, function()
@@ -101,12 +101,12 @@ return function(scope: Fusion.Scope, props: {
 
 
                         [Children] = {
-                            UIAtlas.RoundUICorner(scope)
+                            Components.RoundUICorner(scope)
                         }
                     })
                 }
             }),
-            UIAtlas.TextLabel(scope, {
+            Components.TextLabel(scope, {
                 Name = "ButtonText",
                 LayoutOrder = 2,
                 Size = UDim2.fromScale(0.8, 0.9),

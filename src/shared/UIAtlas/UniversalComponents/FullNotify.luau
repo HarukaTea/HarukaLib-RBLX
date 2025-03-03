@@ -15,7 +15,7 @@ return function (scope: Fusion.Scope, props: {
 })
     return Components.Frame(scope, {
         Name = "FS_Hint_BG",
-        BackgroundColor3 = Color3.new(28, 28, 37),
+        BackgroundColor3 = Components.BLACK_COLOR,
         BackgroundTransparency = 0,
         Parent = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui").ExplorerNotify.Full,
 

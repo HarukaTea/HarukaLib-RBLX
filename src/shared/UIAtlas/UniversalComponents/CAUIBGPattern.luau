@@ -18,7 +18,7 @@ return function (scope: Fusion.Scope, props: {
         Size = props.Size,
 
         Image = "rbxassetid://91666280221875",
-        ImageColor3 = Color3.fromRGB(236, 229, 216),
+        ImageColor3 = Components.WHITE_COLOR,
         ImageTransparency = 0.975,
 
         ScaleType = Enum.ScaleType.Tile,

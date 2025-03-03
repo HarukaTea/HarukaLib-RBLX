@@ -55,6 +55,7 @@ return function (scope: Fusion.Scope, props: {
                             isSelecting:set(false)
                         end,
 
+
                         [Fusion.OnEvent("MouseButton1Click")] = function()
                             props.ViewShownValue:set(false)
                             isSelecting:set(false)
