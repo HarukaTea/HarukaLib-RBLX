@@ -169,11 +169,19 @@ function HarukaListLayout:_Refresh()
             if listLayout.HorizontalAlignment == Enum.HorizontalAlignment.Center then
                 continue
             end
+            if listLayout.HorizontalAlignment == Enum.HorizontalAlignment.Right then
+                offsetX -= absSize.X + paddingX
+                continue
+            end
 
             offsetX += absSize.X + paddingX
 
         elseif listLayout.FillDirection == Enum.FillDirection.Vertical then
             if listLayout.VerticalAlignment == Enum.VerticalAlignment.Center then
+                continue
+            end
+            if listLayout.VerticalAlignment == Enum.VerticalAlignment.Bottom then
+                offsetY -= absSize.Y + paddingY
                 continue
             end
 
