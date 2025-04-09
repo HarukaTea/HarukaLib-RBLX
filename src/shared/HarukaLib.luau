@@ -941,13 +941,13 @@ end
 
 	Returns:
 	```lua
-	local pool = HarukaLib.CreatePartPool(obj, initialAmount)
+	local pool = HarukaLib:CreatePartPool(obj, initialAmount)
 
 	pool:Get()
 	pool:Return(obj)
 	```
 ]]
-function HarukaLib.CreatePartPool(obj: Instance, initialAmount: number?, container: Folder?)
+function HarukaLib:CreatePartPool(obj: Instance, initialAmount: number?, container: Folder?)
 	container = container or Instance.new("Folder")
 	container.Name = "PartPool_"..obj.Name.."_"..HarukaLib:GenerateUUID()
 	container.Parent = workspace
@@ -995,41 +995,6 @@ function HarukaLib.CreatePartPool(obj: Instance, initialAmount: number?, contain
 	end
 
 	return pool
-end
-
-
---[[
-	A helper function to filter a table, to prevent cyclical table references
-]]
-function HarukaLib:CopyTableExcept(t: table, except: { string }, shouldIncludeFunc: boolean?) : table
-	local newT = {}
-
-    for key: string, val: any in t do
-		if not shouldIncludeFunc then
-			if typeof(val) == "function" then continue end
-		end
-        if table.find(except, key) then continue end
-
-        newT[key] = val
-    end
-
-    return newT
-end
-
-
---[[
-	A helper function to filter a table, but it's whitelisted instead of blacklisted
-]]
-function HarukaLib:MakePackage(t: table, whiteList: { string }) : table
-	local newT = {}
-
-	for key: string, val: any in t do
-		if table.find(whiteList, key) then
-			newT[key] = val
-		end
-	end
-
-	return newT
 end
 
 
@@ -1104,23 +1069,9 @@ end
 
 
 --[[
-	A helper function to count dict length
-]]
-function HarukaLib:CountDictLength(dict: { [any]: any }) : number
-	local count = 0
-
-	for _, _ in dict do
-		count += 1
-	end
-
-	return count
-end
-
-
---[[
 	A list of helper functions to manipulate table
 ]]
-function HarukaLib.TableUtil()
+function HarukaLib.TableUtils()
 	local tableUtils = {}
 
 	tableUtils.Keys = function(tbl: table) : { string }
@@ -1207,7 +1158,49 @@ function HarukaLib.TableUtil()
 
 		return newT
 	end
+	tableUtils.Merge = function(tbl1: table, tbl2: table)
+		local newT = table.clone(tbl1)
 
+		for _, v in tbl2 do
+			table.insert(newT, v)
+		end
+
+		return newT
+	end
+	tableUtils.CountDictLength = function(dict: { [any]: any }) : number
+		local count = 0
+
+		for _, _ in dict do
+			count += 1
+		end
+
+		return count
+	end
+	tableUtils.MakePackage = function(t: table, whiteList: { string }) : table
+		local newT = {}
+
+		for key: string, val: any in table.clone(t) do
+			if table.find(whiteList, key) then
+				newT[key] = val
+			end
+		end
+
+		return newT
+	end
+	tableUtils.CopyTableExcept = function(t: table, except: { string }, shouldIncludeFunc: boolean?) : table
+		local newT = {}
+
+		for key: string, val: any in t do
+			if not shouldIncludeFunc then
+				if typeof(val) == "function" then continue end
+			end
+			if table.find(except, key) then continue end
+
+			newT[key] = val
+		end
+
+		return newT
+	end
 
 	return tableUtils
 end
