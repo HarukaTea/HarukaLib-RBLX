@@ -164,6 +164,7 @@ function HarukaLib:RichTextify(text: string) : string
 		["<pink>"] = [[<font color="#ff9ff3">]],
 		["<gray>"] = [[<font color="#747d8c">]],
 	}
+	colorList["<grey>"] = colorList["<gray>"]
 
 	for oriTag: string, rbxColorTag: string in colorList do
 		text = string.gsub(text, oriTag, rbxColorTag)
@@ -533,7 +534,7 @@ function HarukaLib:RollLoot(loots: { [string]: number }) : string
 		return a.Weight < b.Weight
 	end)
 
-	local result = Random.new():NextNumber()
+	local result = Random.new(DateTime.now().UnixTimestamp):NextNumber()
 	local aggregate = 0
 
 	for _, loot: table in lootList do
@@ -662,14 +663,14 @@ end
 --[[
 	Helper function to ban a player, Server-Side ONLY
 ]]
-function HarukaLib:BanPlayer(plr: Player, properties: {
+function HarukaLib:BanPlayerByUserId(userId: number, properties: {
 	Duration: number,
 	DisplayReason: string,
 	PrivateReason: string,
 	ExcludeAltAccounts: boolean,
 })
 	local config = {
-		UserIds = { plr.UserId },
+		UserIds = { userId },
 		Duration = properties.Duration,
 		DisplayReason = properties.DisplayReason,
 		PrivateReason = properties.PrivateReason,
@@ -679,6 +680,37 @@ function HarukaLib:BanPlayer(plr: Player, properties: {
 
 	Promise.new(function()
 		Players:BanAsync(config)
+
+	end):catch(function(err)
+		warn(tostring(err))
+	end)
+end
+
+
+--[[
+	Helper function to ban a player, Server-Side ONLY
+]]
+function HarukaLib:BanPlayer(plr: Player, properties: {
+	Duration: number,
+	DisplayReason: string,
+	PrivateReason: string,
+	ExcludeAltAccounts: boolean,
+})
+	HarukaLib:BanPlayerByUserId(plr.UserId, properties)
+end
+
+
+--[[
+	Helper function to unban a player, Server-Side ONLY
+]]
+function HarukaLib:UnbanPlayerByUserId(userId: number)
+	local config = {
+		UserIds = { userId },
+		ApplyToUniverse = true
+	}
+
+	Promise.new(function()
+		Players:UnbanAsync(config)
 
 	end):catch(function(err)
 		warn(tostring(err))
@@ -1007,13 +1039,12 @@ function HarukaLib.Queue()
 
 	function Queue.new()
 		local self = setmetatable({
-			_first = 0,
-			_last = -1,
-			_queue = {},
-			_isBusy = false,
+			First = 0,
+			Last = -1,
+			Queue = {},
+			Locked = false,
 
 			ElementAdded = Signal.new(),
-			ElementRemoved = Signal.new()
 
 		}, Queue)
 
@@ -1022,44 +1053,44 @@ function HarukaLib.Queue()
 
 
 	function Queue:IsEmpty() : boolean
-		return self._first > self._last
+		return self.First > self.Last
 	end
-	function Queue:IsBusy() : boolean
-		return self._isBusy
+	function Queue:GetItemsInQueue() : number
+		return #self.Queue
 	end
-	function Queue:SetBusyState(state: boolean)
-		self._isBusy = state or false
+
+	function Queue:SetLockState(state: boolean)
+		self.Locked = state
+	end
+	function Queue:IsLocked() : boolean
+		return self.Locked
 	end
 
 
 	function Queue:Push(value: any)
-		local last = self._last + 1
-		self._last = last
-		self._queue[last] = value
+		local last = self.Last + 1
+		self.Last = last
+		self.Queue[last] = value
 
-		if not self:IsBusy() then
-			self.ElementAdded:Fire(value)
+		if not self.Locked then
+			self.ElementAdded:Fire()
 		end
 	end
-
 	function Queue:Pop() : any?
 		if self:IsEmpty() then
 			return nil
 		end
 
-		local first = self._first
-		local value = self._queue[first]
-		self._queue[first] = nil
-		self._first = first + 1
-
-		self.ElementRemoved:Fire(value)
+		local first = self.First
+		local value = self.Queue[first]
+		self.Queue[first] = nil
+		self.First = first + 1
 
 		return value
 	end
 
 	function Queue:Destroy()
 		self.ElementAdded:Destroy()
-		self.ElementRemoved:Destroy()
 
 		self = nil
 	end
@@ -1201,6 +1232,9 @@ function HarukaLib.TableUtils()
 
 		return newT
 	end
+	tableUtils.Clone = function(tbl: table) : table
+		return tableUtils.CopyTableExcept(tbl, {}, false)
+	end
 
 	return tableUtils
 end
@@ -1226,4 +1260,36 @@ function HarukaLib:IsBasePartType(obj: Instance) : boolean
 end
 
 
-return table.freeze(HarukaLib)
+--[[
+	Quickly return an empty part for mocking
+]]
+function HarukaLib:CreateMockPart() : BasePart
+	local part = Instance.new("Part")
+	part.Anchored = true
+	part.Name = "MockPart"
+	part.Size = Vector3.one
+	part.Transparency = 1
+	part.CanCollide = false
+	part.CanTouch = false
+	part.CastShadow = false
+	part.CanQuery = false
+	part.Massless = true
+	part.CollisionGroup = "NoCollision"
+
+	return part
+end
+
+
+--[[
+	Quickly set all particles of an object to a state
+]]
+function HarukaLib:SetParticleState(obj: Instance, state: boolean)
+	for _, child: ParticleEmitter in obj:GetDescendants() do
+		if not child:IsA("ParticleEmitter") then continue end
+
+		child.Enabled = state
+	end
+end
+
+
+return HarukaLib
