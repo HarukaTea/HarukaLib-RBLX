@@ -11,7 +11,10 @@ local TweenService = game:GetService("TweenService")
 local UIS = game:GetService("UserInputService")
 
 local Signal = require(RepS.HarukaShared.Shared.Signal)
-local Promise = require(RepS.HarukaShared.Shared.Promise)
+
+
+local Tween = require(script.HarukaTween)
+local TableUtils = require(script.HarukaTableUtils)
 
 local wait = task.wait
 
@@ -22,10 +25,10 @@ local HarukaLib = {}
 
     **Example:**
     ``````lua
-    HarukaLib:NumberConvert(1000, 2) --- 1.00K
+    HarukaLib:NumberConvertToCurrencyString(1000, 2) --- 1.00K
     ``````
 ]]
-function HarukaLib:NumberConvert(number: number, decimalPlaces: number) : string
+function HarukaLib:NumberConvertToCurrencyString(number: number, decimalPlaces: number) : string
 	local prefixes = { "", "K", "M", "B", "T", "Q", "Qi", "Sx", "Sp", "Oc", "No", "Dc", "Ud", "Dd" }
 	local abbrFactor = math.floor(math.floor(math.log10(number)) / 3)
 
@@ -100,7 +103,7 @@ function HarukaLib:AddAttr(obj: Instance, attribute: string, val: number)
 	if obj:GetAttribute(attribute) == nil then
 		obj:SetAttribute(attribute, 0)
 	end
-	if typeof(obj:GetAttribute(attribute) ~= "number") then
+	if typeof(obj:GetAttribute(attribute)) ~= "number" then
 		return
 	end
 
@@ -112,14 +115,16 @@ end
 	The same as `obj:ClearAllChildren()`, but it applies for attributes
 ]]
 function HarukaLib:ClearAllAttributes(obj: Instance)
-	for attribute, _ in obj:GetAttributes() do obj:SetAttribute(attribute, nil) end
+	for attribute: string, _ in obj:GetAttributes() do
+		obj:SetAttribute(attribute, nil)
+	end
 end
 
 
 --[[
 	Detect if the given position is inside any of the given regions.
 ]]
-function HarukaLib:IsInRegion(position: Vector3, regions: { any }) : BasePart?
+function HarukaLib:IsInRegion(position: Vector3, regions: { BasePart }) : BasePart?
 	local region: BasePart = nil
 
 	for _, child: BasePart in regions do
@@ -140,6 +145,36 @@ function HarukaLib:IsInRegion(position: Vector3, regions: { any }) : BasePart?
 end
 
 
+
+local COLOR_LIST = {
+	["<blue>"] = [[<font color="#47a3ff">]],
+	["<purple>"] = [[<font color="#8178ff">]],
+	["<red>"] = [[<font color="#ff4a65">]],
+	["<orange>"] = [[<font color="#ffaf57">]],
+	["<yellow>"] = [[<font color="#fcff82">]],
+	["<green>"] = [[<font color="#7bed9f">]],
+	["<cyan>"] = [[<font color="#81ecec">]],
+	["<white>"] = [[<font color="#ffffff">]],
+	["<black>"] = [[<font color="#2d3436">]],
+	["<pink>"] = [[<font color="#fd79a8">]],
+	["<gray>"] = [[<font color="#747d8c">]],
+	["<grey>"] = [[<font color="#747d8c">]],
+
+	["</blue>"] = [[</font>]],
+	["</purple>"] = [[</font>]],
+	["</red>"] = [[</font>]],
+	["</orange>"] = [[</font>]],
+	["</yellow>"] = [[</font>]],
+	["</green>"] = [[</font>]],
+	["</cyan>"] = [[</font>]],
+	["</white>"] = [[</font>]],
+	["</black>"] = [[</font>]],
+	["</pink>"] = [[</font>]],
+	["</gray>"] = [[</font>]],
+	["</grey>"] = [[</font>]],
+}
+
+
 --[[
 	Transform a plain text to rich text, it will only work when `RichText = true`
 
@@ -151,22 +186,7 @@ end
 function HarukaLib:RichTextify(text: string) : string
 	if not text then return "" end
 
-	local colorList = {
-		["<blue>"] = [[<font color="#74b9ff">]],
-		["<purple>"] = [[<font color="#a29bfe">]],
-		["<red>"] = [[<font color="#ff6b81">]],
-		["<orange>"] = [[<font color="#f9ca24">]],
-		["<yellow>"] = [[<font color="#f1c40f">]],
-		["<green>"] = [[<font color="#7bed9f">]],
-		["<cyan>"] = [[<font color="#81ecec">]],
-		["<white>"] = [[<font color="#ffffff">]],
-		["<black>"] = [[<font color="#2d3436">]],
-		["<pink>"] = [[<font color="#ff9ff3">]],
-		["<gray>"] = [[<font color="#747d8c">]],
-	}
-	colorList["<grey>"] = colorList["<gray>"]
-
-	for oriTag: string, rbxColorTag: string in colorList do
+	for oriTag: string, rbxColorTag: string in COLOR_LIST do
 		text = string.gsub(text, oriTag, rbxColorTag)
 	end
 
@@ -178,7 +198,7 @@ end
 	Serialize and deserialize roblox types to a table.
 	It only supports `CFrame`, `Vector3`, and `Color3`.
 ]]
-function HarukaLib:Serialize(method: "Pack" | "Unpack", val: any) : any
+function HarukaLib:PackData(method: "Pack" | "Unpack", val: any) : any
 	local valType = typeof(val)
 
 	if method == "Pack" then
@@ -221,15 +241,18 @@ end
 
 	Return a function to destroy the tracker.
 ]]
-function HarukaLib:Hydrate(obj: Instance, props: table)
+function HarukaLib:Hydrate(obj: Instance, props: { any })
 	local Add, Empty = HarukaLib.Bin()
 
-	for prop: string, func in props do
+	for prop: string, func: (val: any) -> nil in props do
 		if string.find(prop, "Attr") then
 			local _, endPos = string.find(prop, "Attr")
 			local attr = string.sub(prop, endPos + 2)
 
-			func(obj:GetAttribute(attr))
+			local success, err = pcall(func, obj:GetAttribute(attr))
+			if not success then
+				warn(err)
+			end
 
 			Add(obj:GetAttributeChangedSignal(attr):Connect(function()
 				func(obj:GetAttribute(attr))
@@ -239,7 +262,10 @@ function HarukaLib:Hydrate(obj: Instance, props: table)
 			local _, endPos = string.find(prop, "Prop")
 			local propName = string.sub(prop, endPos + 2)
 
-			func(obj[propName])
+			local success, err = pcall(func, obj[propName])
+			if not success then
+				warn(err)
+			end
 
 			Add(obj:GetPropertyChangedSignal(propName):Connect(function()
 				func(obj[propName])
@@ -267,7 +293,7 @@ function HarukaLib.Bin()
 			item:Disconnect()
 
 		elseif typeof(item) == "function" then
-			task.spawn(item)
+			pcall(item)
 
 		elseif typeof(item) == "thread" then
 			if item then task.cancel(item) end
@@ -344,162 +370,36 @@ end
 
 	Return a signal class, it will fire when the tween is completed.
 ]]
-function HarukaLib:Tween(object: Instance, style: TweenInfo, goal: table)
-	local properties = {}
-	local tweenSignal = Signal.new()
-
-	local dataTypes = {
-		number = function(a, b, t)
-			return a + ((b - a) * t)
-		end,
-
-		V3 = function(a, b, t)
-			return a:Lerp(b, t)
-		end
-	}
-	local function fastBubbleSort(arr)
-		local n = #arr
-		while n > 1 do
-			local newN = 0
-			for i = 1, n - 1 do
-				if arr[i].Time > arr[i + 1].Time then
-					arr[i], arr[i + 1] = arr[i + 1], arr[i]
-					newN = i
-				end
-			end
-			n = newN
-		end
-	end
-	dataTypes.NumberSequence = function(a, b, t)
-		local keyPoints = {}
-
-		for index: number, keypoint: NumberSequenceKeypoint in a.Keypoints do
-			local nextKeypoint = b.Keypoints[index] :: NumberSequenceKeypoint
-
-			table.insert(keyPoints, NumberSequenceKeypoint.new(
-				math.clamp(dataTypes.number(keypoint.Time, nextKeypoint.Time, t), 0, 1),
-				dataTypes.number(keypoint.Value, nextKeypoint.Value, t),
-				dataTypes.number(keypoint.Envelope, nextKeypoint.Envelope, t)
-			))
-		end
-		fastBubbleSort(keyPoints)
-
-		return NumberSequence.new(keyPoints)
-	end
-	dataTypes.ColorSequence = function(a, b, t)
-		local keyPoints = {}
-
-		for index: number, keypoint: ColorSequenceKeypoint in a.KeyPoints do
-			local nextKeypoint = b.Keypoints[index] :: ColorSequenceKeypoint
-
-			table.insert(keyPoints, ColorSequenceKeypoint.new(
-				math.clamp(dataTypes.number(keypoint.Time, nextKeypoint.Time, t), 0, 1),
-				dataTypes.V3(keypoint.Value, nextKeypoint.Value, math.clamp(t, 0, 1))
-			))
-		end
-		fastBubbleSort(keyPoints)
-
-
-		return ColorSequence.new(keyPoints)
-	end
-	dataTypes.NumberRange = function(a, b, t)
-		return NumberRange.new(
-			dataTypes.number(a.Min, b.Min, t),
-			dataTypes.number(a.Max, b.Max, t)
-		)
-	end
-
-	--// fill properties
-	for name: string, _: any in goal do
-		if name == "Pivot" then
-			if not object:IsA("PVInstance") then
-				warn(name.." is not allowed for this object! "..object:GetFullName())
-				continue
-			end
-
-			properties[name] = object:GetPivot()
-		else
-			properties[name] = object[name]
-		end
-	end
-
-	--- update task
-	local startTime = tick()
-	task.defer(function()
-		local reverse = false
-		local repeated = 0
-
-		while true do
-			if not object.Parent then break end
-
-			local alpha = (tick() - startTime) / style.Time
-			local t = math.min(alpha, 1)
-
-			if style.Reverses then alpha = 1 - t end
-
-			-- Update
-			local lerp = TweenService:GetValue(alpha, style.EasingStyle, style.EasingDirection)
-			for name: string, val: any in goal do
-				local original = properties[name]
-
-				if name == "Pivot" then
-					object:PivotTo(dataTypes.V3(original, val, lerp))
-				else
-					object[name] = dataTypes[typeof(val)](original, val, lerp)
-				end
-			end
-
-			if t == 1 then
-				if style.Reverses and not reverse then
-					reverse = true
-					startTime = tick()
-
-				elseif repeated ~= style.RepeatCount then
-					repeated += 1
-					reverse = false
-					startTime = tick()
-
-				else
-					break
-				end
-			end
-
-			wait()
-		end
-
-		tweenSignal:Fire("Completed")
-		tweenSignal:Destroy()
-	end)
-
-	return tweenSignal
+function HarukaLib:Tween(obj: Instance, style: { any }, goal: any, needSignal: boolean)
+	return Tween(obj, style, goal, needSignal)
 end
 
 
 --[[
 	Inspired by `t`, it can typecheck any value in runtime
 ]]
-function HarukaLib:TypeCheck(checkList: "Integer" | "Min" | "Max" | "MinMax", val: any, extra: {
+function HarukaLib:TypeCheck(checkTask: "Integer" | "Min" | "Max" | "MinMax", val: any, props: {
 	Min: number?,
 	Max: number?
 }) : boolean
 
 	local success = pcall(function()
-		if checkList == "Integer" then
+		if checkTask == "Integer" then
 			assert(type(val) == "number")
 			assert(val % 1 == 0)
 
-		elseif checkList == "Min" then
+		elseif checkTask == "Min" then
 			assert(type(val) == "number")
-			assert(val > extra.Min)
+			assert(val >= props.Min)
 
-		elseif checkList == "Max" then
+		elseif checkTask == "Max" then
 			assert(type(val) == "number")
-			assert(val < extra.Max)
+			assert(val <= props.Max)
 
-		elseif checkList == "MinMax" then
+		elseif checkTask == "MinMax" then
 			assert(type(val) == "number")
-			assert(val > extra.Min)
-			assert(val < extra.Max)
+			assert(val >= props.Min)
+			assert(val <= props.Max)
 		end
 	end)
 
@@ -518,46 +418,79 @@ end
 		["Silver"] = 20
 	})
 	``````
+
+	return a tuple of `(item, weight, entry)`
 ]]
-function HarukaLib:RollLoot(loots: { [string]: number }) : string
-	local lootList = {}
+function HarukaLib:RollLoot(loots: { [string]: number }, luck: number?) : (string, number, number)
+	luck = luck or 1
+
+	local lowestBound = 1e-3
+	local weightAdjustment = 1e9
+
+	luck = math.clamp(luck, lowestBound, math.huge)
+
+	--// add items
+	local items = {}
+	local total = #items
+	local totalWeight = 0
 
 	for loot: string, weight: number in loots do
-		local info = {
-			Name = loot,
-			Weight = weight
-		}
-		table.insert(lootList, info)
-	end
+		local newWeight = weight * weightAdjustment
+		local position = math.max(1, total + 1)
 
-	table.sort(lootList, function(a, b)
-		return a.Weight < b.Weight
-	end)
-
-	local result = Random.new(DateTime.now().UnixTimestamp):NextNumber()
-	local aggregate = 0
-
-	for _, loot: table in lootList do
-		local chance = loot.Weight :: number
-
-		if result < (chance + aggregate) / 100 then
-			return loot.Name
+		if total > 0 then
+			for index = total, 1, -1 do
+				local item = items[index]
+				if item.Weight <= newWeight then
+					position = index
+				else
+					break
+				end
+			end
 		end
 
-		aggregate += chance
+		table.insert(items, position, {
+			Weight = weight,
+			Item = loot
+		})
+
+		totalWeight += weight
 	end
+
+	--// roll
+	local bestScore, bestItem, entry = math.huge, nil, nil
+	local value = math.max(lowestBound, totalWeight - math.floor(totalWeight * math.random() ^ luck))
+	local upperBound = 0
+
+	for index = #items, 1, -1 do
+		local item = items[index]
+		upperBound += item.Weight
+
+		if value <= upperBound and item.Weight < bestScore then
+			bestScore, bestItem, entry = item.Weight, item.Item, index
+			break
+		end
+	end
+	if not bestItem then
+		local item = items[1]
+		bestScore = item.Weight
+		bestItem = item.Item
+		entry = 1
+	end
+
+	return bestItem, bestScore / weightAdjustment, entry
 end
 
 
 --[[
 	Inspired by `CutsceneService`, it will fire the signal class when the cutscene is completed.
 ]]
-function HarukaLib:PlayCutscene(pointsFolder: Folder, duration: number)
+function HarukaLib:PlayCutscene(pointsTable: { BasePart }, duration: number)
 	local camera = workspace.CurrentCamera
 	local cutsceneSignal = Signal.new()
 
 	--// Helper funcs
-	local function _getCF(points: table, t: number) : CFrame
+	local function _getCF(points: { any }, t: number) : CFrame
 		local copy = { unpack(points) }
 
 		local n = #copy
@@ -571,16 +504,15 @@ function HarukaLib:PlayCutscene(pointsFolder: Folder, duration: number)
 
 	--- sort points
 	local points = {}
-	local instances = pointsFolder:GetChildren()
 
-	table.sort(instances, function(a, b)
+	table.sort(pointsTable, function(a, b)
 		return tonumber(a.Name) < tonumber(b.Name)
 	end)
-	for _, point: BasePart in instances do
+	for _, point: BasePart in pointsTable do
 		table.insert(points, point.CFrame)
 	end
 
-	--- play
+
 	camera.CameraType = Enum.CameraType.Scriptable
 
 	local priority = Enum.RenderPriority.Camera.Value + 1
@@ -609,13 +541,21 @@ end
 --[[
 	This is the util for `UIStrokeAdjustor`, return accurate thickness based on viewport size
 ]]
-function HarukaLib:CalculateStrokeThickness(thickness: number) : number
+function HarukaLib:CalculateStrokeThickness(thickness: number, scale: number) : number
 	local VPSize = workspace.CurrentCamera.ViewportSize
-	local DESIGN_SIZE = Vector2.new(1172, 466.4)
+	local DESIGN_VP_SIZE = Vector2.new(1172, 471.2)
 
-	local transformed = thickness * (math.min(VPSize.X, VPSize.Y) / math.min(DESIGN_SIZE.X, DESIGN_SIZE.Y))
+	local function _calScreenRatio() : number
+		local x = VPSize.X / DESIGN_VP_SIZE.X
+		local y = VPSize.Y / DESIGN_VP_SIZE.Y
 
-	return transformed
+		return (x + y) / 2
+	end
+
+	local finalThickness = thickness * _calScreenRatio() * scale
+    finalThickness = math.clamp(finalThickness, 0, 999)
+
+	return finalThickness
 end
 
 
@@ -652,7 +592,6 @@ end
 ]]
 function HarukaLib:CombineRbxId(id: string | number)
     if not id then
-		warn("Invalid ID")
         return "rbxassetid://0"
     end
 
@@ -678,26 +617,14 @@ function HarukaLib:BanPlayerByUserId(userId: number, properties: {
 		ApplyToUniverse = true
 	}
 
-	Promise.new(function()
+	local success, err = pcall(function()
 		Players:BanAsync(config)
-
-	end):catch(function(err)
-		warn(tostring(err))
 	end)
+	if not success then
+		warn(err)
+	end
 end
 
-
---[[
-	Helper function to ban a player, Server-Side ONLY
-]]
-function HarukaLib:BanPlayer(plr: Player, properties: {
-	Duration: number,
-	DisplayReason: string,
-	PrivateReason: string,
-	ExcludeAltAccounts: boolean,
-})
-	HarukaLib:BanPlayerByUserId(plr.UserId, properties)
-end
 
 
 --[[
@@ -709,12 +636,13 @@ function HarukaLib:UnbanPlayerByUserId(userId: number)
 		ApplyToUniverse = true
 	}
 
-	Promise.new(function()
-		Players:UnbanAsync(config)
 
-	end):catch(function(err)
-		warn(tostring(err))
+	local success, err = pcall(function()
+		Players:UnbanAsync(config)
 	end)
+	if not success then
+		warn(err)
+	end
 end
 
 
@@ -743,10 +671,10 @@ function HarukaLib:UITween(ui: GuiObject, style: "In" | "Out", props: {
 
 		ui = clonedTweenOutUI
 
-		Promise.try(props.TweenCallback, clonedTweenOutUI)
+		pcall(props.TweenCallback, clonedTweenOutUI)
 
 	elseif props.TweenCallback and style == "In" then
-		Promise.try(props.TweenCallback, ui)
+		pcall(props.TweenCallback, ui)
 	end
 
 	props.DelayTime = props.DelayTime or 0
@@ -759,7 +687,7 @@ function HarukaLib:UITween(ui: GuiObject, style: "In" | "Out", props: {
 	local tweenObjs = ui:GetDescendants()
 	table.insert(tweenObjs, ui)
 
-	local function _tweenGoal(obj: GuiObject, attr: string, tweenProps: table)
+	local function _tweenGoal(obj: GuiObject, attr: string, tweenProps: { any })
 		if not obj then return end
 		if not obj.Parent then return end
 
@@ -789,12 +717,12 @@ function HarukaLib:UITween(ui: GuiObject, style: "In" | "Out", props: {
 			obj.Interactable = false
 		end)
 	end
-	local function _startTween(obj: GuiObject, tweenProps: table)
+	local function _startTween(obj: GuiObject, tweenProps: { any })
 		if not obj then return end
 		if not obj.Parent then return end
 
 		pcall(function()
-			TweenService:Create(obj, tweenInfo, tweenProps):Play()
+			HarukaLib:CreateTween(obj, tweenInfo, tweenProps):Play()
 		end)
 		pcall(function()
 			obj.Interactable = true
@@ -809,32 +737,44 @@ function HarukaLib:UITween(ui: GuiObject, style: "In" | "Out", props: {
 		if not obj.Parent then continue end
 
 		if obj:IsA("Frame") then
+			if not obj.Visible then continue end
+
 			_tweenGoal(obj, "BackgroundTransparency", tweenProps)
 
 		elseif obj:IsA("TextLabel") or obj:IsA("TextButton") then
+			if not obj.Visible then continue end
+
 			_tweenGoal(obj, "BackgroundTransparency", tweenProps)
 			_tweenGoal(obj, "TextTransparency", tweenProps)
 			_tweenGoal(obj, "TextStrokeTransparency", tweenProps)
 
 		elseif obj:IsA("ImageLabel") or obj:IsA("ImageButton") then
+			if not obj.Visible then continue end
+
 			_tweenGoal(obj, "ImageTransparency", tweenProps)
 			_tweenGoal(obj, "BackgroundTransparency", tweenProps)
 
 		elseif obj:IsA("ScrollingFrame") then
+			if not obj.Visible then continue end
+
 			_tweenGoal(obj, "BackgroundTransparency", tweenProps)
 			_tweenGoal(obj, "ScrollBarImageTransparency", tweenProps)
 
 		elseif obj:IsA("CanvasGroup") then
+			if not obj.Visible then continue end
+
 			_tweenGoal(obj, "GroupTransparency", tweenProps)
 
 		elseif obj:IsA("UIStroke") then
+			if not obj.Enabled then continue end
+
 			_tweenGoal(obj, "Transparency", tweenProps)
 		else
 			continue
 		end
 
 		if props.DelayTime > 0 then
-			Promise.delay(props.DelayTime):andThenCall(_startTween, obj, tweenProps)
+			task.delay(props.DelayTime, _startTween, obj, tweenProps)
 		else
 			_startTween(obj, tweenProps)
 		end
@@ -870,15 +810,16 @@ function HarukaLib:UITween(ui: GuiObject, style: "In" | "Out", props: {
 			local tween = TweenService:Create(props.PosTweenBaseElement, tweenInfo, {
 				Position = nowPos
 			})
-			tween:Play()
-			tween.Completed:Wait()
-			tween:Destroy()
+			tween.Completed:Once(function()
+				props.PosTweenBaseElement.Position = if style == "In" then nowPos else goalPos
 
-			props.PosTweenBaseElement.Position = if style == "In" then nowPos else goalPos
+				tween:Destroy()
+			end)
+			tween:Play()
 		end
 
 		if props.DelayTime > 0 then
-			Promise.delay(props.DelayTime):andThenCall(_tweenPosition)
+			task.delay(props.DelayTime, _tweenPosition)
 		else
 			_tweenPosition()
 		end
@@ -1091,8 +1032,6 @@ function HarukaLib.Queue()
 
 	function Queue:Destroy()
 		self.ElementAdded:Destroy()
-
-		self = nil
 	end
 
 	return Queue.new()
@@ -1102,152 +1041,25 @@ end
 --[[
 	A list of helper functions to manipulate table
 ]]
-function HarukaLib.TableUtils()
-	local tableUtils = {}
-
-	tableUtils.Keys = function(tbl: table) : { string }
-		local keys = table.create(#tbl)
-
-		for key: string in tbl do
-			table.insert(keys, key)
-		end
-
-		return keys
-	end
-	tableUtils.Values = function(tbl: table) : { any }
-		local values = table.create(#tbl)
-
-		for _, value in tbl do
-			table.insert(values, value)
-		end
-
-		return values
-	end
-	tableUtils.IsEmpty = function(tbl: table) : boolean
-		return next(tbl) == nil
-	end
-	tableUtils.Filter = function(tbl: table, predicate: (val: any, key: any, tbl: { table }) -> boolean) : table
-		local newT = table.create(#tbl)
-
-		if #tbl > 0 then
-			local n = 0
-			for i, v in tbl do
-				if predicate(v, i, tbl) then
-					n += 1
-					newT[n] = v
-				end
-			end
-		else
-			for k, v in tbl do
-				if predicate(v, k, tbl) then
-					newT[k] = v
-				end
-			end
-		end
-
-		return newT
-	end
-	tableUtils.Cut = function(tbl: table, len: number) : table
-		local n = #tbl
-		len = math.clamp(len, 1, n)
-
-		return if len == n then table.clone(tbl) else table.move(tbl, 1, len, 1, table.create(len))
-	end
-	tableUtils.CheckForSome = function(tbl: table, callback: (val: any, key: any, tbl: { table }) -> boolean) : boolean
-		for k, v in tbl do
-			if callback(v, k, tbl) then
-				return true
-			end
-		end
-
-		return false
-	end
-	tableUtils.CheckForEvery = function(tbl: table, callback: (val: any, key: any, tbl: { table }) -> boolean) : boolean
-		for k, v in tbl do
-			if not callback(v, k, tbl) then
-				return false
-			end
-		end
-
-		return true
-	end
-	tableUtils.Find = function(tbl: table, callback: (val: any, key: any, tbl: { table }) -> boolean) : (Value?, Key?)
-		for k, v in tbl do
-			if callback(v, k, tbl) then
-				return v, k
-			end
-		end
-
-		return nil, nil
-	end
-	tableUtils.Map = function(tbl: table, callback: (val: any, key: any, tbl: { table }) -> any) : table
-		local newT = table.create(#tbl)
-
-		for k, v in tbl do
-			newT[k] = callback(v, k, tbl)
-		end
-
-		return newT
-	end
-	tableUtils.Merge = function(tbl1: table, tbl2: table)
-		local newT = table.clone(tbl1)
-
-		for _, v in tbl2 do
-			table.insert(newT, v)
-		end
-
-		return newT
-	end
-	tableUtils.CountDictLength = function(dict: { [any]: any }) : number
-		local count = 0
-
-		for _, _ in dict do
-			count += 1
-		end
-
-		return count
-	end
-	tableUtils.MakePackage = function(t: table, whiteList: { string }) : table
-		local newT = {}
-
-		for key: string, val: any in table.clone(t) do
-			if table.find(whiteList, key) then
-				newT[key] = val
-			end
-		end
-
-		return newT
-	end
-	tableUtils.CopyTableExcept = function(t: table, except: { string }, shouldIncludeFunc: boolean?) : table
-		local newT = {}
-
-		for key: string, val: any in t do
-			if not shouldIncludeFunc then
-				if typeof(val) == "function" then continue end
-			end
-			if table.find(except, key) then continue end
-
-			newT[key] = val
-		end
-
-		return newT
-	end
-	tableUtils.Clone = function(tbl: table) : table
-		return tableUtils.CopyTableExcept(tbl, {}, false)
-	end
-
-	return tableUtils
-end
+HarukaLib.TableUtils = TableUtils
 
 
 --[[
 	A quick helper function to emit particles
 ]]
-function HarukaLib:EmitParticles(obj: Instance)
-	for _, child: ParticleEmitter in obj:GetDescendants() do
-		if not child:IsA("ParticleEmitter") then continue end
+function HarukaLib:EmitParticles(obj: Instance, childrenOnly: boolean?)
+	if childrenOnly then
+		for _, child: ParticleEmitter in obj:GetChildren() do
+			if not child:IsA("ParticleEmitter") then continue end
 
-		child:Emit(child:GetAttribute("EmitCount") or 0)
+			child:Emit(child:GetAttribute("EmitCount") or 0)
+		end
+	else
+		for _, child: ParticleEmitter in obj:GetDescendants() do
+			if not child:IsA("ParticleEmitter") then continue end
+
+			child:Emit(child:GetAttribute("EmitCount") or 0)
+		end
 	end
 end
 
@@ -1274,6 +1086,7 @@ function HarukaLib:CreateMockPart() : BasePart
 	part.CastShadow = false
 	part.CanQuery = false
 	part.Massless = true
+	part.EnableFluidForces = false
 	part.CollisionGroup = "NoCollision"
 
 	return part
@@ -1281,13 +1094,94 @@ end
 
 
 --[[
+	Quickly return an empty part for mocking
+]]
+function HarukaLib:CreateMockModel() : BasePart
+	local model = Instance.new("Model")
+	model.Name = "MockModel"
+
+	local part = HarukaLib:CreateMockPart()
+	part.Parent = model
+
+	model.PrimaryPart = part
+
+	return model
+end
+
+
+--[[
 	Quickly set all particles of an object to a state
 ]]
-function HarukaLib:SetParticleState(obj: Instance, state: boolean)
-	for _, child: ParticleEmitter in obj:GetDescendants() do
-		if not child:IsA("ParticleEmitter") then continue end
+function HarukaLib:SetParticleState(obj: Instance, state: boolean, childrenOnly: boolean?)
+	if childrenOnly then
+		for _, child: ParticleEmitter in obj:GetChildren() do
+			if not child:IsA("ParticleEmitter") then continue end
 
-		child.Enabled = state
+			child.Enabled = state
+		end
+	else
+		for _, child: ParticleEmitter in obj:GetDescendants() do
+			if not child:IsA("ParticleEmitter") then continue end
+
+			child.Enabled = state
+		end
+	end
+end
+
+
+--[[
+	template for creating a new `Tween`, and destroying it after it's done
+]]
+function HarukaLib:CreateTween(instance: Instance, tweenInfo: TweenInfo, tweenProperties: { [string]: any })
+	local tweenObj = TweenService:Create(instance, tweenInfo, tweenProperties)
+
+	tweenObj.Completed:Once(function()
+		tweenObj:Destroy()
+	end)
+
+	return tweenObj
+end
+
+
+--[[
+	Toggles the Enabled property ParticleEmitters (and Beams if IncludeBeams is true)
+	in (Parent) to (Value), or reverses the value if (Switch)
+]]
+function HarukaLib:ZonitoToggleParticles(instance: Instance, val: boolean, reverse: boolean, includeBeams: boolean, childrenOnly: boolean?)
+	if childrenOnly then
+		for _, v in instance:GetChildren() do
+			if v:IsA("ParticleEmitter") then
+				if reverse then
+					v.Enabled = not v.Enabled
+				else
+					v.Enabled = val
+				end
+			end
+			if includeBeams and (v:IsA("Beam")) or (v:IsA("Trail")) then
+				if reverse then
+					v.Enabled = not v.Enabled
+				else
+					v.Enabled = val
+				end
+			end
+		end
+	else
+		for _, v in instance:GetDescendants() do
+			if v:IsA("ParticleEmitter") then
+				if reverse then
+					v.Enabled = not v.Enabled
+				else
+					v.Enabled = val
+				end
+			end
+			if includeBeams and (v:IsA("Beam")) or (v:IsA("Trail")) then
+				if reverse then
+					v.Enabled = not v.Enabled
+				else
+					v.Enabled = val
+				end
+			end
+		end
 	end
 end
 

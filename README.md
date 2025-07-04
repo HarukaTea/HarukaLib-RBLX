@@ -30,4 +30,4 @@ A Lib for my own projects to use, contains various helper functions.
 
 and much more!
 
-Head to `src/shared/Shared/HarukaLib.luau` for more info
+Head to `Shared/HarukaLib.luau` for more info

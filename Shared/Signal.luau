@@ -1,6 +1,6 @@
+--!optimize 2
 --!nocheck
 --!native
---!optimize 2
 
 export type Connection<U...> = {
 	Connected: boolean,
@@ -78,7 +78,7 @@ local function connect<T..., U...>(self: Signal<T...>, fn: (...any) -> (), ...: 
 	end
 	self._head = cn
 
-	--// Allow for bin to collect garbage
+	--// allow for `HarukaLib.Bin` to collect garbage
 	cn.Destroy = function()
 		cn:Disconnect()
 	end
@@ -101,7 +101,9 @@ local wait = if task
 		local cn
 		cn = connect(self, function(...)
 			disconnect(cn)
-			task.spawn(thread, ...)
+			if coroutine.status(thread) == "suspended" then
+				task.spawn(thread, ...)
+			end
 		end)
 		return coroutine.yield()
 	end
