@@ -278,7 +278,7 @@ end
 
 
 --[[
-	Inspired by `Maid`, and `Fusion.doCleanup`, you can add anything to the bin.
+	Inspired by `Janitor`, and `Fusion.doCleanup`, you can add anything to the bin.
 
 	Return a function to destroy the items inside the bin, bin can reused.
 ]]
@@ -1184,6 +1184,9 @@ function HarukaLib:ZonitoToggleParticles(instance: Instance, val: boolean, rever
 		end
 	end
 end
+
+
+HarukaLib.RichTextFormatter = if script:FindFirstChild("HarukaRichTextFormatter") then require(script.HarukaRichTextFormatter) else nil
 
 
 return HarukaLib
