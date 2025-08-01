@@ -18,8 +18,6 @@
         "sourcemap.json": true,
 
         "src/RbxCharacterSounds.client.luau": true,
-
-        "src/shared/Shared/HarukaCMD": true,
     },
     "stylua.targetReleaseVersion": "latest",
     "robloxLsp.diagnostics.globals": [
