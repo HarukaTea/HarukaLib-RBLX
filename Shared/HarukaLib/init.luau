@@ -1,4 +1,8 @@
 --!nocheck
+--!nolint LocalUnused
+--!nolint LocalShadow
+--!nolint SameLineStatement
+--!nolint ImplicitReturn
 
 local CAS = game:GetService("ContextActionService")
 local Debris = game:GetService("Debris")
@@ -16,7 +20,6 @@ local Signal = require(RepS.HarukaShared.Shared.Signal)
 local Tween = require(script.HarukaTween)
 local TableUtils = require(script.HarukaTableUtils)
 
-local wait = task.wait
 
 local HarukaLib = {}
 
@@ -121,6 +124,7 @@ function HarukaLib:ClearAllAttributes(obj: Instance)
 end
 
 
+local abs = math.abs
 --[[
 	Detect if the given position is inside any of the given regions.
 ]]
@@ -128,13 +132,15 @@ function HarukaLib:IsInRegion(position: Vector3, regions: { BasePart }) : BasePa
 	local region: BasePart = nil
 
 	for _, child: BasePart in regions do
+		if child == nil then continue end
 		if not child:IsA("BasePart") then continue end
 
 		local point = child.CFrame:PointToObjectSpace(position)
+		local size = child.Size
 
-		if math.abs(point.X) < child.Size.X / 2
-			and math.abs(point.Y) < child.Size.Y / 2
-			and math.abs(point.Z) < child.Size.Z / 2 then
+		if abs(point.X) < size.X / 2
+			and abs(point.Y) < size.Y / 2
+			and abs(point.Z) < size.Z / 2 then
 
 			region = child
 			break
@@ -458,8 +464,9 @@ function HarukaLib:RollLoot(loots: { [string]: number }, luck: number?) : (strin
 	end
 
 	--// roll
+	local RNG = Random.new()
 	local bestScore, bestItem, entry = math.huge, nil, nil
-	local value = math.max(lowestBound, totalWeight - math.floor(totalWeight * math.random() ^ luck))
+	local value = math.max(lowestBound, totalWeight - math.floor(totalWeight * RNG:NextNumber() ^ luck))
 	local upperBound = 0
 
 	for index = #items, 1, -1 do
@@ -974,7 +981,16 @@ end
 --[[
 	A simple function of Queue
 ]]
-function HarukaLib.Queue()
+function HarukaLib.Queue() : {
+	IsEmpty: () -> boolean,
+	GetItemsInQueue: () -> number,
+	SetLockState: (_: any, state: boolean) -> nil,
+	IsLocked: () -> boolean,
+
+	Push: (_: any, value: any) -> nil,
+	Pop: () -> any?,
+	Destroy: () -> nil
+}
 	local Queue = {}
 	Queue.__index = Queue
 
@@ -1186,7 +1202,58 @@ function HarukaLib:ZonitoToggleParticles(instance: Instance, val: boolean, rever
 end
 
 
-HarukaLib.RichTextFormatter = if script:FindFirstChild("HarukaRichTextFormatter") then require(script.HarukaRichTextFormatter) else nil
+function HarukaLib.RichTextFormatter() : {
+	Stroke: (text: string, color: string, thickness: number?, joinMode: string?, transparency: number?) -> string,
+	Highlight: (text: string, color: string, transparency: number) -> string
+}
+	local HarukaRichTextFormatter = {}
+
+	function HarukaRichTextFormatter.Stroke(
+		text: string,
+		color: string,
+		thickness: number?,
+		joinMode: string?,
+		transparency: number?
+	): string
+		return '<stroke color="'
+			.. "#"..color
+			.. '" joins="'
+			.. string.lower(joinMode or "Miter")
+			.. '" thickness="'
+			.. tostring(thickness or 1)
+			.. '" transparency="'
+			.. tostring(transparency or 0)
+			.. '">'
+			.. text
+			.. "</stroke>"
+	end
+
+	function HarukaRichTextFormatter.Highlight(text: string, color: string, transparency: number): string
+		local transparencyAttribute = ' transparency="' .. (transparency or 0) .. '"'
+
+		local fontStart, fontEnd = string.find(text, "^<font.->")
+		local fontCloseStart = string.find(text, "</font>")
+
+		if fontStart and fontCloseStart then
+			local fontOpen = string.sub(text, fontStart, fontEnd)
+			local innerText = string.sub(text, fontEnd + 1, fontCloseStart - 1)
+			local fontClose = "</font>"
+
+			local marked = '<mark color="'
+				.. "#"..color
+				.. '"'
+				.. transparencyAttribute
+				.. ">"
+				.. innerText
+				.. "</mark>"
+			return fontOpen .. marked .. fontClose
+		else
+			return '<mark color="' .. "#"..color .. '"' .. transparencyAttribute .. ">" .. text .. "</mark>"
+		end
+	end
+
+	return HarukaRichTextFormatter
+end
 
 
 return HarukaLib

@@ -1,8 +1,13 @@
+--!nocheck
+--!nolint LocalUnused
+--!nolint LocalShadow
+--!nolint SameLineStatement
+--!nolint ImplicitReturn
+
 --[=[
 	Docs: https://devforum.roblox.com/t/wind-shake-high-performance-wind-effect-for-leaves-and-foliage/1039806/1
 --]=]
 
---!nocheck
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -82,6 +87,14 @@ function WindShake.AddObjectShake(self: WindShake, object: BasePart | Bone)
 			then object.WorldCFrame
 			else object.CFrame,
 
+		PivotOffset = if object:IsA("BasePart")
+			then object.PivotOffset
+			else nil,
+
+		PivotOffsetInverse = if object:IsA("BasePart")
+			then object.PivotOffset:Inverse()
+			else nil,
+
 		LastUpdate = os.clock(),
 	}
 	self.Handled += 1
@@ -135,21 +148,17 @@ function WindShake.Update(self: WindShake, deltaTime: number)
 		objMeta.LastUpdate = now
 		active += 1
 
-		local objSettings = objMeta.Settings
-
-		local windDirection = (objSettings.WindDirection or sharedWindDirection)
+		local windDirection = (sharedWindDirection)
 		if windDirection.Magnitude < 1e-5 then
 			return
 		end
 
-		local amp = (objSettings.WindPower or sharedWindPower) * 0.2
-
+		local amp = (sharedWindPower) * 0.2
 		if amp < 1e-5 then
 			return
 		end
 
-		local freq = now * ((objSettings.WindSpeed or sharedWindSpeed) * 0.08)
-
+		local freq = now * (sharedWindSpeed * 0.08)
 		if freq < 1e-5 then
 			return
 		end
@@ -159,7 +168,7 @@ function WindShake.Update(self: WindShake, deltaTime: number)
 		local lerpAlpha = clamp(step + distanceAlphaSq, 0.1, 0.5)
 		local lowAmp = amp / 3
 
-		local origin = objMeta.Origin * (objSettings.PivotOffset or CFrame.identity)
+		local origin = objMeta.Origin * (objMeta.PivotOffset or CFrame.identity)
 		local localWindDirection = origin:VectorToObjectSpace(windDirection)
 
 		if isBone then
@@ -187,7 +196,7 @@ function WindShake.Update(self: WindShake, deltaTime: number)
 						noise(seed, freq, 0) * lowAmp,
 						noise(freq, seed, 0) * lowAmp
 					)
-					* (objSettings.PivotOffsetInverse or CFrame.identity)
+					* (objMeta.PivotOffsetInverse or CFrame.identity)
 				) + (windDirection * animValue * (amp * 2)),
 				lerpAlpha
 			)

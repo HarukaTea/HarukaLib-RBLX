@@ -1,7 +1,7 @@
 
 ## HarukaLib
 
-A Lib for my own projects to use, contains various helper functions.
+A framework repo for my own projects to use, contains various helper functions.
 
 > Helper Functions
 - `Clock`
