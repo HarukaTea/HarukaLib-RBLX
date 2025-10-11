@@ -1,6 +1,16 @@
 {
     "name": "HarukaShared",
     "tree": {
-        "$path": "src"
+        "$className": "DataModel",
+
+        "ReplicatedStorage": {
+            "$className": "ReplicatedStorage",
+            "$ignoreUnknownInstances": true,
+
+            "HarukaShared": {
+                "$className": "Folder",
+                "$path": "src"
+            }
+        }
     }
 }
