@@ -23,7 +23,7 @@ def process_file(path: Path) -> bool:
     try:
         lines = path.read_text(encoding="utf-8").splitlines()
     except Exception as e:
-        print(f"❌ 读取失败: {path}  {e}")
+        print(f"❌ Load file error: {path}  {e}")
         return False
 
     lines = [ln for ln in lines if ln.strip() not in REMOVE_LINES]
