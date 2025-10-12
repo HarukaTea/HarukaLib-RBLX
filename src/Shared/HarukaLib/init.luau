@@ -1,4 +1,3 @@
---!nocheck
 --!nolint LocalUnused
 --!nolint LocalShadow
 --!nolint SameLineStatement
@@ -19,8 +18,6 @@ local Signal = require(RepS.HarukaShared.Shared.Signal)
 
 local Tween = require(script.HarukaTween)
 local TableUtils = require(script.HarukaTableUtils)
-
-local wait = task.wait
 
 
 local HarukaLib = {}

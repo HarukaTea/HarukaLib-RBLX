@@ -1,12 +1,9 @@
---!nocheck
 --!nolint LocalUnused
 --!nolint LocalShadow
 --!nolint SameLineStatement
 --!nolint ImplicitReturn
 
 --// Inspired by Screen3D module in devforum, modified to fit my needs.
-
-
 
 
 local Part2D = require(script.Part2D)
@@ -65,8 +62,8 @@ end
 --// Private
 
 function Screen3D:GetPart2D(guiObject: GuiObject) : Types.Haruka2DUIClass
-    if guiObject == nil then return nil end
-    if self.RootGui == nil then return nil end
+    if guiObject == nil then return end
+    if self.RootGui == nil then return end
 
 
     if not part2DComponents[self.RootGui][guiObject] then

@@ -1,4 +1,3 @@
---!nocheck
 --!nolint LocalUnused
 --!nolint LocalShadow
 --!nolint SameLineStatement
@@ -14,7 +13,7 @@ local Types = require(script.Parent.Types)
 
 type Haruka2DUIClass = Types.Haruka2DUIClass
 
-local Part2D: Haruka2DUIClass = {}
+local Part2D = {}
 Part2D.__index = Part2D
 
 
@@ -251,4 +250,4 @@ function Part2D:GetPartPivot(oriCFrame: CFrame, pivotCFrame: CFrame, angleCFrame
     return oriCFrame:Inverse() * pivotCFrame * angleCFrame * pivotCFrame:Inverse() * oriCFrame
 end
 
-return Part2D
+return { new = Part2D.new }

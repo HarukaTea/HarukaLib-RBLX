@@ -1,4 +1,3 @@
---!nocheck
 --!nolint LocalUnused
 --!nolint LocalShadow
 --!nolint SameLineStatement
@@ -33,15 +32,11 @@ else
     GlobalEvents = require(SSS.HarukaServer.Library.ServerEvents)
 end
 
-export type CallbackProps = any
-export type CommandJSON = {
-    Name: string,
-    Alias: string,
-    Args: { string },
-    RankReq: number,
 
-    Callback: (props: CallbackProps) -> nil
-}
+local Types = require(script.Types)
+
+type CallbackProps = Types.CallbackProps
+type CommandJSON = Types.CommandJSON
 
 
 --// Init once

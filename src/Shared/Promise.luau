@@ -1,4 +1,3 @@
---!nocheck
 --!nolint LocalUnused
 --!nolint LocalShadow
 --!nolint SameLineStatement
@@ -65,13 +64,72 @@ type SignalConnection = {
 	[any]: any,
 }
 
+type PromiseLib = {
+	__index: PromiseLib,
+	prototype: { [string]: any },
+
+	Error: any,
+	Status: Status,
+	_getTime: () -> number,
+
+	all: <T>(promises: { TypedPromise<T> }) -> TypedPromise<{ T }>,
+	allSettled: <T>(promise: { TypedPromise<T> }) -> TypedPromise<{ Status }>,
+	any: <T>(promise: { TypedPromise<T> }) -> TypedPromise<T>,
+	defer: <TReturn...>(
+		executor: (
+			resolve: (TReturn...) -> (),
+			reject: (...any) -> (),
+			onCancel: (abortHandler: (() -> ())?) -> boolean
+		) -> ()
+	) -> TypedPromise<TReturn...>,
+	delay: (seconds: number) -> TypedPromise<number>,
+	each: <T, TReturn>(
+		list: { T | TypedPromise<T> },
+		predicate: (value: T, index: number) -> TReturn | TypedPromise<TReturn>
+	) -> TypedPromise<{ TReturn }>,
+	fold: <T, TReturn>(
+		list: { T | TypedPromise<T> },
+		reducer: (accumulator: TReturn, value: T, index: number) -> TReturn | TypedPromise<TReturn>
+	) -> TypedPromise<TReturn>,
+	fromEvent: <TReturn...>(
+		event: Signal<TReturn...>,
+		predicate: ((TReturn...) -> boolean)?
+	) -> TypedPromise<TReturn...>,
+	is: (object: any) -> boolean,
+	new: <TReturn...>(
+		executor: (
+			resolve: (TReturn...) -> (),
+			reject: (...any) -> (),
+			onCancel: (abortHandler: (() -> ())?) -> boolean
+		) -> ()
+	) -> TypedPromise<TReturn...>,
+	onUnhandledRejection: (callback: (promise: TypedPromise<any>, ...any) -> ()) -> () -> (),
+	promisify: <TArgs..., TReturn...>(callback: (TArgs...) -> TReturn...) -> (TArgs...) -> TypedPromise<TReturn...>,
+	race: <T>(promises: { TypedPromise<T> }) -> TypedPromise<T>,
+	reject: (...any) -> TypedPromise<...any>,
+	resolve: <TReturn...>(TReturn...) -> TypedPromise<TReturn...>,
+	retry: <TArgs..., TReturn...>(
+		callback: (TArgs...) -> TypedPromise<TReturn...>,
+		times: number,
+		TArgs...
+	) -> TypedPromise<TReturn...>,
+	retryWithDelay: <TArgs..., TReturn...>(
+		callback: (TArgs...) -> TypedPromise<TReturn...>,
+		times: number,
+		seconds: number,
+		TArgs...
+	) -> TypedPromise<TReturn...>,
+	some: <T>(promise: { TypedPromise<T> }, count: number) -> TypedPromise<{ T }>,
+	try: <TArgs..., TReturn...>(callback: (TArgs...) -> TReturn..., TArgs...) -> TypedPromise<TReturn...>,
+}
+
 
 local ERROR_NON_PROMISE_IN_LIST = "Non-promise value passed into %s at index %s"
 local ERROR_NON_LIST = "Please pass a list of promises to %s"
 local ERROR_NON_FUNCTION = "Please pass a handler function to %s!"
 local MODE_KEY_METATABLE = { __mode = "k" }
 
-local function isCallable(value)
+local function isCallable(value: any?)
 	if type(value) == "function" then
 		return true
 	end
@@ -762,13 +820,15 @@ end
 --[=[
 	Checks whether the given object is a Promise via duck typing. This only checks if the object is a table and has an `andThen` method.
 ]=]
-function Promise.is(object)
+function Promise.is(object: any)
 	if type(object) ~= "table" then
 		return false
 	end
 
 	local objectMetatable = getmetatable(object)
 
+	local rawT1 = rawget(objectMetatable, "__index")
+	local rawT2 = rawget(rawT1, "andThen")
 	if objectMetatable == Promise then
 		-- The Promise came from this library.
 		return true
@@ -778,7 +838,7 @@ function Promise.is(object)
 	elseif
 		type(objectMetatable) == "table"
 		and type(rawget(objectMetatable, "__index")) == "table"
-		and isCallable(rawget(rawget(objectMetatable, "__index"), "andThen"))
+		and isCallable(rawT2)
 	then
 		-- Maybe this came from a different or older Promise library.
 		return true
@@ -1282,11 +1342,6 @@ function Promise.prototype:_reject(...)
 				task.spawn(callback, self, unpack(self._values, 1, self._valuesLength))
 			end
 
-			if Promise.TEST then
-				-- Don't spam output when we're running tests.
-				return
-			end
-
 			warn(message)
 		end)()
 	end
@@ -1310,12 +1365,6 @@ function Promise.prototype:_finalize()
 	self._queuedFinally = nil
 	self._queuedReject = nil
 	self._queuedResolve = nil
-
-	-- Clear references to other Promises to allow gc
-	if not Promise.TEST then
-		self._parent = nil
-		self._consumers = nil
-	end
 
 	task.defer(coroutine.close, self._thread)
 end
@@ -1425,9 +1474,10 @@ function Promise.fromEvent(event, predicate)
 
 		if shouldDisconnect and connection then
 			return disconnect()
+		else
+			onCancel(disconnect)
+			return nil
 		end
-
-		onCancel(disconnect)
 	end)
 end
 
@@ -1449,56 +1499,4 @@ function Promise.onUnhandledRejection(callback)
 	end
 end
 
-return Promise :: {
-	Error: any,
-
-	all: <T>(promises: { TypedPromise<T> }) -> TypedPromise<{ T }>,
-	allSettled: <T>(promise: { TypedPromise<T> }) -> TypedPromise<{ Status }>,
-	any: <T>(promise: { TypedPromise<T> }) -> TypedPromise<T>,
-	defer: <TReturn...>(
-		executor: (
-			resolve: (TReturn...) -> (),
-			reject: (...any) -> (),
-			onCancel: (abortHandler: (() -> ())?) -> boolean
-		) -> ()
-	) -> TypedPromise<TReturn...>,
-	delay: (seconds: number) -> TypedPromise<number>,
-	each: <T, TReturn>(
-		list: { T | TypedPromise<T> },
-		predicate: (value: T, index: number) -> TReturn | TypedPromise<TReturn>
-	) -> TypedPromise<{ TReturn }>,
-	fold: <T, TReturn>(
-		list: { T | TypedPromise<T> },
-		reducer: (accumulator: TReturn, value: T, index: number) -> TReturn | TypedPromise<TReturn>
-	) -> TypedPromise<TReturn>,
-	fromEvent: <TReturn...>(
-		event: Signal<TReturn...>,
-		predicate: ((TReturn...) -> boolean)?
-	) -> TypedPromise<TReturn...>,
-	is: (object: any) -> boolean,
-	new: <TReturn...>(
-		executor: (
-			resolve: (TReturn...) -> (),
-			reject: (...any) -> (),
-			onCancel: (abortHandler: (() -> ())?) -> boolean
-		) -> ()
-	) -> TypedPromise<TReturn...>,
-	onUnhandledRejection: (callback: (promise: TypedPromise<any>, ...any) -> ()) -> () -> (),
-	promisify: <TArgs..., TReturn...>(callback: (TArgs...) -> TReturn...) -> (TArgs...) -> TypedPromise<TReturn...>,
-	race: <T>(promises: { TypedPromise<T> }) -> TypedPromise<T>,
-	reject: (...any) -> TypedPromise<...any>,
-	resolve: <TReturn...>(TReturn...) -> TypedPromise<TReturn...>,
-	retry: <TArgs..., TReturn...>(
-		callback: (TArgs...) -> TypedPromise<TReturn...>,
-		times: number,
-		TArgs...
-	) -> TypedPromise<TReturn...>,
-	retryWithDelay: <TArgs..., TReturn...>(
-		callback: (TArgs...) -> TypedPromise<TReturn...>,
-		times: number,
-		seconds: number,
-		TArgs...
-	) -> TypedPromise<TReturn...>,
-	some: <T>(promise: { TypedPromise<T> }, count: number) -> TypedPromise<{ T }>,
-	try: <TArgs..., TReturn...>(callback: (TArgs...) -> TReturn..., TArgs...) -> TypedPromise<TReturn...>,
-}
+return Promise :: PromiseLib
