@@ -242,7 +242,6 @@ export type Fusion = {
 	Tween: TweenConstructor,
 
 	New: NewConstructor,
-	Hydrate: HydrateConstructor,
 
 	Children: SpecialKey,
 	Out: (propertyName: string) -> SpecialKey,
