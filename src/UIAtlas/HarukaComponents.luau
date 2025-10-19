@@ -16,14 +16,23 @@ local HarukaColorLab = require(RepS.HarukaShared.UIAtlas.HarukaColorLab)
 
 local HarukaComponents = {}
 HarukaComponents.HarukaColorLab = HarukaColorLab
+HarukaComponents.FusionComponents = FusionComponents
 
 
 local DESIGN_VP_SIZE = Vector2.new(1168, 462.4)
 HarukaComponents.DESIGN_VP_SIZE = DESIGN_VP_SIZE
 
 
-local WHITE_BG_COLOR = HarukaColorLab.COLOR_SERIES.AzurLane.Background
-local BLACK_BG_COLOR = HarukaColorLab.COLOR_SERIES.Genshin.Background
+local WHITE_BG_COLOR = HarukaColorLab.WHITE_COLOR
+local BLACK_BG_COLOR = HarukaColorLab.BLACK_COLOR
+
+
+--// legacy references
+HarukaComponents.BLACK_COLOR = HarukaColorLab.BLACK_COLOR
+HarukaComponents.WHITE_COLOR = HarukaColorLab.WHITE_COLOR
+HarukaComponents.RED_COLOR = HarukaColorLab.RED_COLOR
+HarukaComponents.GREEN_COLOR = HarukaColorLab.GREEN_COLOR
+HarukaComponents.AZUR_BLUE_COLOR = HarukaColorLab.AZUR_BLUE_COLOR
 
 
 export type FusionPropsEntry = { [string | Fusion.SpecialKey]: any }
