@@ -64,10 +64,10 @@ end
 
 
 function HarukaComponents.HarukaScreenGui(scope: Fusion.Scope, guiProps: FusionPropsEntry, childProps: {
-	TopProps: FusionPropsEntry,
-	CenterProps: FusionPropsEntry,
-	BottomProps: FusionPropsEntry,
-	FullProps: FusionPropsEntry
+	TopProps: FusionPropsEntry?,
+	CenterProps: FusionPropsEntry?,
+	BottomProps: FusionPropsEntry?,
+	FullProps: FusionPropsEntry?
 }) : ScreenGui
 
 	guiProps = guiProps or {}
@@ -77,6 +77,8 @@ function HarukaComponents.HarukaScreenGui(scope: Fusion.Scope, guiProps: FusionP
 		BottomProps = {},
 		FullProps = {}
 	}
+	local topProps, centerProps, bottomProps, fullProps =
+		childProps.TopProps, childProps.CenterProps, childProps.BottomProps, childProps.FullProps
 
 	local defaultTopProps = {
 		Name = "Top",
@@ -102,10 +104,10 @@ function HarukaComponents.HarukaScreenGui(scope: Fusion.Scope, guiProps: FusionP
 
 		[Fusion.Children] = {}
 	}
-	_reconcileProps(defaultTopProps, childProps.TopProps)
-	_reconcileProps(defaultCenterProps, childProps.CenterProps)
-	_reconcileProps(defaultBottomProps, childProps.BottomProps)
-	_reconcileProps(defaultFSProps, childProps.FullProps)
+	_reconcileProps(defaultTopProps, topProps)
+	_reconcileProps(defaultCenterProps, centerProps)
+	_reconcileProps(defaultBottomProps, bottomProps)
+	_reconcileProps(defaultFSProps, fullProps)
 
 
 	local top, center, bottom, full = nil, nil, nil, nil
