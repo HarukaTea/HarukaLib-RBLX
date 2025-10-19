@@ -68,7 +68,7 @@ function HarukaComponents.HarukaScreenGui(scope: Fusion.Scope, guiProps: FusionP
 	CenterProps: FusionPropsEntry?,
 	BottomProps: FusionPropsEntry?,
 	FullProps: FusionPropsEntry?
-}) : ScreenGui
+}?) : ScreenGui
 
 	guiProps = guiProps or {}
 	childProps = childProps or {
@@ -77,6 +77,8 @@ function HarukaComponents.HarukaScreenGui(scope: Fusion.Scope, guiProps: FusionP
 		BottomProps = {},
 		FullProps = {}
 	}
+
+	local childProps = childProps
 	local topProps, centerProps, bottomProps, fullProps =
 		childProps.TopProps, childProps.CenterProps, childProps.BottomProps, childProps.FullProps
 

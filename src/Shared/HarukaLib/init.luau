@@ -376,7 +376,7 @@ end
 
 	Return a signal class, it will fire when the tween is completed.
 ]]
-function HarukaLib:Tween(obj: Instance, style: TweenInfo, goal: { [string]: any }, needSignal: boolean) : Signal.SignalClass
+function HarukaLib:Tween(obj: Instance, style: TweenInfo, goal: { [string]: any }, needSignal: boolean?) : Signal.SignalClass
 	return Tween(obj, style, goal, needSignal)
 end
 
@@ -668,7 +668,7 @@ function HarukaLib:UITween(ui: GuiObject, style: "In" | "Out", props: {
 
 	SetOriPropsWhenOut: boolean?,
 	FollowOriPropsWhenIn: boolean?,
-	TweenCallback: (clonedTweenOutUI: GuiObject) -> nil?,
+	TweenCallback: nil | (clonedTweenOutUI: GuiObject) -> nil,
 
 	PosTweenStyle: string?,
 	PosTweenBaseElement: GuiObject?,
