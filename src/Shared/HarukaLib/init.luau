@@ -1,7 +1,3 @@
---!nolint LocalUnused
---!nolint LocalShadow
---!nolint SameLineStatement
---!nolint ImplicitReturn
 
 local CAS = game:GetService("ContextActionService")
 local Debris = game:GetService("Debris")
@@ -792,7 +788,6 @@ function HarukaLib:UITween(ui: GuiObject, style: "In" | "Out", props: {
 		elseif obj:IsA("UIStroke") then
 			if not obj.Enabled then continue end
 
-			local obj = obj :: UIStroke
 			_tweenGoal(obj, "Transparency", tweenProps)
 		else
 			continue
@@ -945,7 +940,9 @@ export type HarukaQueue = {
 
 	Push: (self: HarukaQueue, value: any) -> nil,
 	Pop: (self: HarukaQueue) -> any?,
-	Destroy: (self: HarukaQueue) -> nil
+	Destroy: (self: HarukaQueue) -> nil,
+
+	ElementAdded: Signal.SignalClass
 }
 function HarukaLib.Queue() : HarukaQueue
 	local Queue = {}

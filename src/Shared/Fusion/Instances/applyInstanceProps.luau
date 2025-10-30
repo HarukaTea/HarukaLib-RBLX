@@ -1,7 +1,3 @@
---!nolint LocalUnused
---!nolint LocalShadow
---!nolint SameLineStatement
---!nolint ImplicitReturn
 
 local task = nil -- Disable usage of Roblox's task scheduler
 
@@ -80,7 +76,6 @@ local function bindProperty(
 	value: Types.UsedAs<unknown>
 )
 	if castToState(value) then
-		local value = value :: Types.StateObject<unknown>
 		checkLifetime.bOutlivesA(
 			scope, instance,
 			value.scope, value.oldestTask,

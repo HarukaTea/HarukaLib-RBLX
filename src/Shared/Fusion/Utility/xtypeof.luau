@@ -1,7 +1,3 @@
---!nolint LocalUnused
---!nolint LocalShadow
---!nolint SameLineStatement
---!nolint ImplicitReturn
 
 local task = nil -- Disable usage of Roblox's task scheduler
 
@@ -17,7 +13,6 @@ local function xtypeof(
 	local typeString = typeof(x)
 
 	if typeString == "table" then
-		local x = x :: {type: unknown?}
 		if typeof(x.type) == "string" then
 			return x.type
 		end

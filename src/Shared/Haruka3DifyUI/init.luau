@@ -1,7 +1,3 @@
---!nolint LocalUnused
---!nolint LocalShadow
---!nolint SameLineStatement
---!nolint ImplicitReturn
 
 --// Inspired by Screen3D module in devforum, modified to fit my needs.
 

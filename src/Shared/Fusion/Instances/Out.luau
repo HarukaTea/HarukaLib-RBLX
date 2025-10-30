@@ -1,7 +1,3 @@
---!nolint LocalUnused
---!nolint LocalShadow
---!nolint SameLineStatement
---!nolint ImplicitReturn
 
 local task = nil -- Disable usage of Roblox's task scheduler
 
@@ -39,17 +35,15 @@ local function Out(
 				if not ok then
 					External.logError("invalidOutProperty", nil, applyTo.ClassName, propertyName)
 				end
-	
+
 				if not castToState(value) then
 					External.logError("invalidOutType")
 				end
-				local value = value :: Types.StateObject<unknown>
 				if value.kind ~= "Value" then
 					External.logError("invalidOutType")
 				end
-				local value = value :: Types.Value<unknown>
 				checkLifetime.bOutlivesA(
-					scope, applyTo, 
+					scope, applyTo,
 					value.scope, value.oldestTask,
 					checkLifetime.formatters.propertyOutputsTo, propertyName
 				)

@@ -1,7 +1,3 @@
---!nolint LocalUnused
---!nolint LocalShadow
---!nolint SameLineStatement
---!nolint ImplicitReturn
 
 local CollectionService = game:GetService("CollectionService")
 local RepS = game:GetService("ReplicatedStorage")
@@ -20,7 +16,7 @@ export type ValObjects = IntValue | StringValue | BoolValue | ObjectValue | CFra
 RayValue | Vector3Value | Color3Value | NumberValue | BrickColorValue | IntConstrainedValue
 
 
-FusionComponents.useTagged = function(scope: Fusion.Scope, tag: string) : Fusion.Value<{ Instance }>
+FusionComponents.useTagged = function(scope: Fusion.Scope<any>, tag: string) : Fusion.Value<{ Instance }>
     local val = Fusion.Value(scope, CollectionService:GetTagged(tag))
 
     local function _getChildren()
@@ -34,7 +30,7 @@ FusionComponents.useTagged = function(scope: Fusion.Scope, tag: string) : Fusion
 end
 
 
-FusionComponents.useMouse = function(scope: Fusion.Scope) : Fusion.Value<Vector2>
+FusionComponents.useMouse = function(scope: Fusion.Scope<any>) : Fusion.Value<Vector2>
     local val = Fusion.Value(scope, UserInputService:GetMouseLocation())
 
     table.insert(scope, UserInputService.InputBegan:Connect(function(inputObj)
@@ -50,7 +46,7 @@ FusionComponents.useMouse = function(scope: Fusion.Scope) : Fusion.Value<Vector2
 end
 
 
-FusionComponents.useViewportSize = function(scope: Fusion.Scope) : Fusion.Value<Vector2>
+FusionComponents.useViewportSize = function(scope: Fusion.Scope<any>) : Fusion.Value<Vector2>
     local val = Fusion.Value(scope, workspace.CurrentCamera.ViewportSize)
 
     table.insert(scope, workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
@@ -61,7 +57,7 @@ FusionComponents.useViewportSize = function(scope: Fusion.Scope) : Fusion.Value<
 end
 
 
-FusionComponents.useFolder = function(scope: Fusion.Scope, folder: Folder) : Fusion.Value<{ Instance }>
+FusionComponents.useFolder = function(scope: Fusion.Scope<any>, folder: Folder) : Fusion.Value<{ Instance }>
     local val = Fusion.Value(scope, folder:GetChildren())
 
     local function _getChildren()
@@ -75,7 +71,7 @@ FusionComponents.useFolder = function(scope: Fusion.Scope, folder: Folder) : Fus
 end
 
 
-FusionComponents.useValue = function(scope: Fusion.Scope, valueInstance: ValObjects) : Fusion.Value<any>
+FusionComponents.useValue = function(scope: Fusion.Scope<any>, valueInstance: ValObjects) : Fusion.Value<any>
     local val = Fusion.Value(scope, valueInstance.Value)
 
     table.insert(scope, valueInstance:GetPropertyChangedSignal("Value"):Connect(function()
@@ -86,7 +82,7 @@ FusionComponents.useValue = function(scope: Fusion.Scope, valueInstance: ValObje
 end
 
 
-FusionComponents.useXboxControllerHotInput = function(scope: Fusion.Scope) : Fusion.Value<string>
+FusionComponents.useXboxControllerHotInput = function(scope: Fusion.Scope<any>) : Fusion.Value<string>
     local lastInput = Fusion.Value(scope, "MobileDevice")
     local device = HarukaLib:GetDevice()
 

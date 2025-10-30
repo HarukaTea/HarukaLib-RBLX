@@ -1,7 +1,3 @@
---!nolint LocalUnused
---!nolint LocalShadow
---!nolint SameLineStatement
---!nolint ImplicitReturn
 
 local task = nil -- Disable usage of Roblox's task scheduler
 
@@ -37,7 +33,6 @@ local function OnChange(
 				elseif typeof(callback) ~= "function" then
 					External.logError("invalidChangeHandler", nil, propertyName)
 				else
-					local callback = callback :: (...unknown) -> (...unknown)
 					table.insert(scope, event:Connect(function()
 						callback((applyTo :: any)[propertyName])
 					end))
