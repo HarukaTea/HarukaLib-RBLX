@@ -35,10 +35,10 @@ HarukaColorLab.COLOR_SERIES.AzurPromilia = {
 
 
 HarukaColorLab.COLOR_SERIES.Muelsyse = {
-    Background = Color3.fromHex('#28272e'),
+    Background = Color3.fromHex('#100e0a'),
+    BackgroundLighter = Color3.fromHex('#25292f'),
 
-    Text = Color3.fromHex('#f6e0ba'),
-    Text2 = Color3.fromHex('#c6b99e')
+    Text = Color3.fromHex('#f3dfb8'),
 }
 
 
@@ -46,7 +46,7 @@ HarukaColorLab.COLOR_SERIES.Muelsyse = {
 
 
 HarukaColorLab.BLACK_COLOR = HarukaColorLab.COLOR_SERIES.Muelsyse.Background
-HarukaColorLab.WHITE_COLOR = HarukaColorLab.COLOR_SERIES.Muelsyse.Text
+HarukaColorLab.WHITE_COLOR = HarukaColorLab.COLOR_SERIES.Genshin.Text
 HarukaColorLab.RED_COLOR = HarukaColorLab.COLOR_SERIES.AzurPromilia.Red
 HarukaColorLab.GREEN_COLOR = HarukaColorLab.COLOR_SERIES.AzurPromilia.Green
 HarukaColorLab.BLUE_COLOR = HarukaColorLab.COLOR_SERIES.AzurPromilia.Blue
