@@ -14,8 +14,8 @@ local Promise = require(ReplicatedStorage.HarukaShared.Shared.Promise)
 export type OrderedDatastoreWrapper = {
 	__index : OrderedDatastoreWrapper,
 
-	GetOrderedPositionAsync: (self: OrderedDatastoreWrapper, Key: string | number, Descending: boolean) -> Promise.TypedPromise,
-	UpdateAsync: (self: OrderedDatastoreWrapper, Key: string, Value: number) -> Promise.TypedPromise,
+	GetOrderedPositionAsync: <T>(self: OrderedDatastoreWrapper, Key: string | number, Descending: boolean) -> Promise.TypedPromise<T>,
+	UpdateAsync: <T>(self: OrderedDatastoreWrapper, Key: string, Value: number) -> Promise.TypedPromise<T>,
 
 	new: (OrderedDatastoreName: string, ConvertUserIdToString: boolean) -> OrderedDatastoreWrapper,
 
@@ -72,7 +72,6 @@ local function safeCall(func, self, requestType, ...)
 		success, ret = pcall(func, self, ...)
 
 		if not success then
-			print("[OrderedDatastore] Error: " .. ret)
 			if string.find(ret, "501") or string.find(ret, "504") then
 				return
 			end
@@ -92,7 +91,6 @@ local function retryOperation(maxRetries, retryDelay, operation)
 			if retries < maxRetries then
 				task.wait(retryDelay)
 			else
-				print("[OrderedDatastore] Max retries reached")
 				return nil
 			end
 		end

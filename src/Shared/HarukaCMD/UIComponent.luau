@@ -5,30 +5,39 @@ local RepS = game:GetService("ReplicatedStorage")
 
 local Components = require(RepS.HarukaShared.UIAtlas.HarukaComponents)
 local Fusion = require(RepS.HarukaShared.Shared.Fusion)
-local UIPriorityBook = require(RepS.HarukaShared.Library.UIPriorityBook)
+
 
 local Children = Fusion.Children
 
+
+local Types = require(script.Parent.Types)
+
+
+type Dict = {[string]: any}
+
+
 return function (scope: Fusion.Scope, props: {
-    IsShownVal: Fusion.Value,
-    CMDInput: Fusion.Value,
-    CMDSearchInput: Fusion.Value,
-    Intellisense: Fusion.Value,
-    IntellisensePointer: Fusion.Value,
-    ItemIntellisensePointer: Fusion.Value,
-    ExtraArgs: { Fusion.Value },
-    ExtraArgsSearch: { Fusion.Value },
+    IsShownVal: Fusion.Value<boolean>,
+    CMDInput: Fusion.Value<string>,
+    CMDSearchInput: Fusion.Value<string>,
 
-    ItemIntellisense: Fusion.Value,
+    Intellisense: Fusion.Value<{ Types.CommandJSON }>,
+    ItemIntellisense: Fusion.Value<{ Types.CommandJSON }>,
 
-}, self: { [string]: any })
+    IntellisensePointer: Fusion.Value<number>,
+    ItemIntellisensePointer: Fusion.Value<number>,
+
+    ExtraArgs: { Fusion.Value<string> },
+    ExtraArgsSearch: { Fusion.Value<string> },
+
+}, self: Types.HarukaCMDClass)
 
     local isSelectingCMD = Fusion.Value(scope, false)
 
 
     return Components.HarukaScreenGui(scope, {
         Name = "HarukaCMD",
-        DisplayOrder = UIPriorityBook.Highest,
+        DisplayOrder = 1000,
         Parent = Players.LocalPlayer.PlayerGui,
 
         Enabled = Fusion.Computed(scope, function(use: Fusion.Use, _)
@@ -144,7 +153,7 @@ return function (scope: Fusion.Scope, props: {
                         }),
 
 
-                        Fusion.ForPairs(scope, props.Intellisense, function(_, scope: Fusion.Scope, index: number, cmd: table)
+                        Fusion.ForPairs(scope, props.Intellisense, function(_, scope: Fusion.Scope, index: number, cmd: Types.CommandJSON)
                             return index, Components.TextButton(scope, {
                                 Name = cmd.Name,
                                 AutoLocalize = false,
@@ -209,7 +218,7 @@ return function (scope: Fusion.Scope, props: {
 
                                 Components.PaddingFrame(scope, "AAA"),
 
-                                Fusion.ForPairs(scope, props.ItemIntellisense, function(_, scope: Fusion.Scope, index: number, arg: table)
+                                Fusion.ForPairs(scope, props.ItemIntellisense, function(_, scope: Fusion.Scope, index: number, arg: Types.CommandArgJSON)
                                     local argType = arg.Type :: string
 
                                     local intellisenseItems = Fusion.Value(scope, {})
@@ -218,19 +227,23 @@ return function (scope: Fusion.Scope, props: {
                                     if argType == "enum" then
                                         intellisenseItems:set(arg.EnumItems)
 
+                                        local enumItems: { string } = arg.EnumItems
+
                                         local searchObserver = Fusion.Observer(scope, extraArgSearchVal)
                                         searchObserver:onBind(function()
                                             local searchText = Fusion.peek(extraArgSearchVal) :: string
                                             local realSearch = string.gsub(searchText, " ", "")
 
                                             if realSearch == "" then
-                                                intellisenseItems:set(arg.EnumItems)
+                                                intellisenseItems:set(enumItems)
                                                 return
                                             end
 
+                                            realSearch = realSearch :: string
+
                                             local accepted = {}
                                             pcall(function()
-                                                for _, option: string in arg.EnumItems do
+                                                for _, option in enumItems do
                                                     if string.find(string.lower(option), string.lower(realSearch)) then
                                                         table.insert(accepted, option)
                                                     end
@@ -267,6 +280,8 @@ return function (scope: Fusion.Scope, props: {
                                                 __getPlayers()
                                                 return
                                             end
+
+                                            realSearch = realSearch :: string
 
                                             local accepted = {}
                                             pcall(function()

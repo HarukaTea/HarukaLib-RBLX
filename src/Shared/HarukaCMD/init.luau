@@ -12,6 +12,7 @@ local TextChatService = game:GetService("TextChatService")
 local SSS = game:GetService("ServerScriptService")
 
 
+local AssetBook = require(RepS.HarukaShared.Library.AssetBook)
 local HarukaLib = require(RepS.HarukaShared.Shared.HarukaLib)
 local Fusion = require(RepS.HarukaShared.Shared.Fusion)
 local Promise = require(RepS.HarukaShared.Shared.Promise)
@@ -55,10 +56,9 @@ end
 local wait = task.wait
 
 
-local HarukaCMD = {}
+local HarukaCMD = {} :: Types.HarukaCMDClass
 HarukaCMD.__index = HarukaCMD
 
---// Helper functions
 
 --// Constructor
 function HarukaCMD.new()
@@ -425,20 +425,24 @@ function HarukaCMD:_InitCommandExecutionTracker()
         --// return true args
         local check, validatedArgs = self:_ValidateCmd(realCmd, cmdArgs)
         if not check then
-            GlobalEvents.CreateNotify.Fire(plr, "[Error] Command failed to pass the parameter check!")
+            GlobalEvents.CreateNotify_S.Fire(plr, "[Error] Command failed to pass the parameter check!")
             return
         end
 
 
         --// Check if the player has the required rank
         if (plr:GetAttribute("Rank") or 0) < realCmd.RankReq then
-            GlobalEvents.CreateNotify.Fire(plr, "Insufficient permissions!")
+            GlobalEvents.CreateNotify_S.Fire(plr, "Insufficient permissions!")
+            return
+        end
+        if (plr:GetAttribute("Rank") or 0) == 127 and game.GameId ~= AssetBook.CFUniverseId_Main then
+            GlobalEvents.CreateNotify_S.Fire(plr, "We're sorry, but Mods are not allowed to execute commands in test place.")
             return
         end
 
 
         Promise.new(function(resolve)
-            if not RunService:IsStudio() and realCmd.RankReq > 1 then
+            if not RunService:IsStudio() and realCmd.RankReq > 1 and game.GameId == AssetBook.CFUniverseId_Main then
                 Promise.try(function()
                     local WEBHOOK_URL = "http://rainyleaf.xyz:3000/roblox-message"
 
@@ -469,7 +473,7 @@ function HarukaCMD:_InitCommandExecutionTracker()
         end):catch(function(err)
             warn(tostring(err))
 
-            GlobalEvents.CreateNotify.Fire(plr, "Command execution failed!")
+            GlobalEvents.CreateNotify_S.Fire(plr, "Command execution failed!")
         end)
     end)
 end

@@ -150,16 +150,18 @@ end
 
 
 local COLOR_LIST = {
-	["<blue>"] = [[<font color="#47a3ff">]],
-	["<purple>"] = [[<font color="#8178ff">]],
-	["<red>"] = [[<font color="#ff4a65">]],
-	["<orange>"] = [[<font color="#ffaf57">]],
-	["<yellow>"] = [[<font color="#fcff82">]],
-	["<green>"] = [[<font color="#7bed9f">]],
-	["<cyan>"] = [[<font color="#81ecec">]],
+	--// HarukaColorLab -> Genshin -> Elements
+
+	["<blue>"] = [[<font color="#80c0ff">]],
+	["<purple>"] = [[<font color="#ffacff">]],
+	["<red>"] = [[<font color="#ff5e41">]],
+	["<orange>"] = [[<font color="#ff9999">]],
+	["<yellow>"] = [[<font color="#ffe699">]],
+	["<green>"] = [[<font color="#99ff88">]],
+	["<cyan>"] = [[<font color="#80ffd7">]],
 	["<white>"] = [[<font color="#ffffff">]],
 	["<black>"] = [[<font color="#2d3436">]],
-	["<pink>"] = [[<font color="#fd79a8">]],
+	["<pink>"] = [[<font color="#ffacff">]],
 	["<gray>"] = [[<font color="#747d8c">]],
 	["<grey>"] = [[<font color="#747d8c">]],
 
@@ -349,7 +351,10 @@ function HarukaLib.Clock(tickTime: number, func: () -> (), runInstantly: boolean
 	local dropTime = tickTime * 10
 
 	if runInstantly then
-		func()
+		local success, result = pcall(func)
+		if not success then
+			warn(result)
+		end
 	end
 
 	local connection = RunService.Heartbeat:Connect(function(deltaTime)
@@ -1216,14 +1221,12 @@ end
 
 
 -- Note: Yields
-function HarukaLib.TryUntil(pCallback: (...any) -> (boolean, any), waitTime: number, successCallback: nil | (pcallResult: any) -> nil) : any
+function HarukaLib.TryUntil(pCallback: () -> (boolean, any), waitTime: number, successCallback: nil | () -> nil) : any
 	local result = nil
 
 	for _ = 1, math.huge do
 		local success, pcallResult = pcall(pCallback)
 		if success then
-			if successCallback then successCallback(pcallResult) end
-
 			result = pcallResult
 			break
 		else
@@ -1261,10 +1264,10 @@ function HarukaLib:TeleportPlayer(char: Model, target: CFrame)
 	if sharedEvents then
 		if RunService:IsServer() then
 			local player = Players:GetPlayerFromCharacter(char)
-			sharedEvents.UpdateCameraCFrame.Fire(player, target)
+			sharedEvents.UpdateCameraCF_S.Fire(player, target)
 
 		elseif RunService:IsClient() then
-			sharedEvents.UpdateCameraCFrame:Fire(target)
+			sharedEvents.UpdateCameraCF:Fire(target)
 		end
 	end
 end
